@@ -6,14 +6,14 @@ export default withMermaid(
   defineConfig({
     title: "AuroraBot 文档站",
     description: "AuroraBot — 新一代内驱式、自主决策的智能体框架",
-    base: "/AuroraBot/",
+    base: "/",
     cleanUrls: true,
     lastUpdated: true,
     ignoreDeadLinks: true,
     head: [
       [
         "link",
-        { rel: "icon", type: "image/svg+xml", href: "/AuroraBot/logo.svg" },
+        { rel: "icon", type: "image/svg+xml", href: "/logo.svg" },
       ],
     ],
     mermaid: {
