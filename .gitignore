@@ -152,9 +152,8 @@ legacy/
 .cursor/
 .idea/
 .trae/
-docs/node_modules/
-docs/.vitepress/cache/
-docs/.vitepress/dist/
+node_modules/
+.vitepress/cache/
+.vitepress/dist/
 
 .reasonix/
-node_modules/
