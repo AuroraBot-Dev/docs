@@ -70,7 +70,7 @@ export default withMermaid(
         provider: "local",
       },
       socialLinks: [
-        { icon: "github", link: "https://github.com/JuFireX/AuroraBot" },
+        { icon: "github", link: "https://github.com/AuroraBot-Dev/AuroraBot" },
       ],
       outline: {
         label: "本页内容",
