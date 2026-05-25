@@ -79,6 +79,16 @@ flowchart LR
 
 三个节点（`HeartbeatRouter` / `GoalGeneratorAgent` / `ReflexLearnerAgent`）已在代码中实现但拓扑配置中处于禁用状态。
 
+## 适合的场景
+
+- 养赛博妹妹
+- 养赛博女鹅
+- 个人助手 (类似 [AstrBot](https://astrbot.app/) , [OpenClaw](https://openclaws.io/zh/))
+
+::: tip
+当前版本仅支持 QQ 接入，后续版本将支持更多平台。且个人助手的支持不是第一目标, 可能会长期搁置。
+:::
+
 ## 已经具备的能力
 
 - 应用发现、注册、生命周期管理（`ApplicationHost` + `PlatformAPI`）
