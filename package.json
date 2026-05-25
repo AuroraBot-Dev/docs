@@ -5,7 +5,9 @@
   "description": "AuroraBot 文档站",
   "scripts": {
     "dev": "vitepress dev . --host 0.0.0.0 --port 5173",
-    "build": "vitepress build ."
+    "build": "vitepress build .",
+    "docs:dev": "vitepress dev . --host 0.0.0.0 --port 5173",
+    "docs:build": "vitepress build ."
   },
   "devDependencies": {
     "mermaid": "^11.14.0",
