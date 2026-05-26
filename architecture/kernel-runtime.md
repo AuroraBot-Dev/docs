@@ -52,57 +52,11 @@ while not stop_event.is_set():
 
 `src/brain/kernel/circuit.py` + `src/brain/kernel/event_bus.py`
 
-**启动**：
-
-1. `FileEventBus(nodes)` 创建事件总线和 `asyncio.Queue`
-2. `dispatch_forever()` 协程启动，持续从队列取事件
-3. 每个节点创建 `node.run()` 协程，等待 `_ready_event` 被置位
-4. `_bootstrap_heartbeat()` 注入初始脉冲
-
-**运行时**：
-
-```
-FileEvent → dispatch_forever() 从队列取出
-  → 遍历 nodes → on_event() 匹配?
-      → 是 → state = READY → _ready_event.set()
-              → node.run() 被唤醒 → execute() → [FileUpdate, ...]
-                  → apply_update(update) 落盘 → publish 新 FileEvent → 回到顶部
-      → 否 → 继续等待下一事件
-```
-
-## 节点生命周期
-
-```mermaid
-stateDiagram-v2
-    [*] --> IDLE: 节点创建
-
-    IDLE --> READY: on_event() 匹配
-    READY --> RUNNING: run() 唤醒
-    RUNNING --> IDLE: execute() 完成
-
-    READY --> TERMINATED: Circuit.stop()
-    RUNNING --> TERMINATED: Circuit.stop()
-
-    TERMINATED --> [*]
-```
+`Circuit` 创建 `FileEventBus`，注入所有节点，管理 `dispatch_forever` 和 `node.run()` 协程。启动时 `_bootstrap_heartbeat()` 注入首个 `FileEvent` 激活管道。
 
 ::: tip
-Agent 在执行期间可能长时间等待 LLM 响应，期间状态保持 `RUNNING`。Router 执行时间可预测，通常毫秒级完成。
+认知周期流程、节点状态机和文件写入锁机制见 [节点系统 - FileEventBus](./node-system.md#fileeventbus--事件总线)。
 :::
-
-## 文件写入与锁
-
-`FileEventBus.apply_update()` 为每个文件路径维护一个 `asyncio.Lock`：
-
-```python
-async def apply_update(self, update, node_id):
-    lock = self._get_lock(descriptor.path)
-    async with lock:
-        self._write_file(...)
-    self.publish(FileEvent(path=descriptor.path, change_type="write"))
-```
-
-同一文件被多个节点并发写入时，`asyncio.Lock` 保证串行化。文件格式支持 `"json"` 和普通文本，json 模式下可选 `"append"` 模式（向数组追加元素）。
 
 ## 关闭
 
@@ -115,3 +69,9 @@ async def apply_update(self, update, node_id):
 ::: tip
 平台侧的 `_app_task` 取消和 `app_host.stop_all()` 见 [平台运行时 - 关闭](./platform-runtime.md#关闭)。
 :::
+
+## 下一步阅读
+
+- 想了解节点数据结构与调度细节: 读 [节点系统](./node-system.html)
+- 想了解认知管线的完整拓扑: 读 [认知引擎架构](./brain-architecture.html)
+- 想了解 App 生命周期: 读 [平台运行时](./platform-runtime.html)

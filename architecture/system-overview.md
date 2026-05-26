@@ -52,66 +52,13 @@ while 未停止:
 
 ## 启动流程
 
-```mermaid
-sequenceDiagram
-    participant main as main.py
-    participant host as ApplicationHost
-    participant circuit as Circuit
-    participant bridge as EventBridge
+两阶段启动: 平台先注册 App, 内核再启动 Circuit + EventBridge。详见:
 
-    main->>main: Config.ensure_dirs()
-    main->>main: 加载 apps/config.yaml
-
-    loop 每个 enabled App
-        main->>host: register(app)
-        host->>host: 读 manifest.yaml → 注册 commands
-        host->>host: app.on_start()
-    end
-
-    main->>circuit: build_circuit(host)
-    circuit->>circuit: 读 topology.yaml → 创建节点实例
-    circuit->>circuit: start() → 启动 dispatch_forever + 各 node.run()
-    circuit->>circuit: bootstrap heartbeat → 注入首个 FileEvent
-
-    main->>bridge: run_event_bridge(host, circuit)
-    main->>main: run_app_loop(host)
-
-    loop 运行时
-        bridge->>host: drain_events()
-        bridge->>bridge: 写 inbox/pending/*.json
-        Note over circuit: FileEvent → dispatch → node.run() → execute() → FileUpdate → publish
-    end
-```
-
-## 认知电路拓扑
-
-认知节点的邻接关系在 `src/brain/nodes/topology.yaml` 中声明。当前启用的拓扑为：
-
-```mermaid
-flowchart LR
-    A["inbox/pending/\nevent_*.json"] --> B["FanOutRouter"]
-    B --> C["reflex/pending/"]
-    B --> D["memory/pending/"]
-    B --> E["inbox/done/"]
-
-    C --> F["ReflexRouter"]
-    F -->|"命中规则"| G["actions/pending/"]
-
-    E --> H["PlanAgent"]
-    H --> I["plans/pending/"]
-    I --> J["ExpandAgent"]
-    J --> G
-
-    G --> K["ExecuteAgent"]
-    K --> L["results/pending/"]
-```
-
-::: warning
-当前内核为 **kernel-α** 内核, 认知电路拓扑结构不够完善, 会逐步集成更多认知节点。
-:::
+- 平台侧: [平台运行时 - 启动](./platform-runtime.md#启动)
+- 内核侧: [内核运行时 - 启动](./kernel-runtime.md#启动)
 
 ## 下一步阅读
 
-- 想了解 Platform 与 App 的契约：[平台运行时](./platform-runtime.html)
-- 想了解 Circuit 与 EventBridge 的协作：[内核运行时](./kernel-runtime.html)
-- 想了解认知引擎的详细机制：[认知引擎架构](./brain-architecture.html)
+- 想了解 Platform 与 App 的契约: [平台运行时](./platform-runtime.html)
+- 想了解 Circuit 与 EventBridge 的协作: [内核运行时](./kernel-runtime.html)
+- 想了解认知引擎的详细机制: [认知引擎架构](./brain-architecture.html)

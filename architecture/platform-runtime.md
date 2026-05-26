@@ -136,4 +136,6 @@ flowchart TB
 
 ## 下一步阅读
 
-- 想写自己的应用：读 [App 开发指南](../develop/app-development.html)
+- 想了解认知引擎如何处理事件: 读 [内核运行时](./kernel-runtime.html)
+- 想了解认知引擎总体结构: 读 [认知引擎架构](./brain-architecture.html)
+- 想写自己的应用: 读 [App 开发指南](../develop/app-development.html)
