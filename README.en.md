@@ -9,7 +9,11 @@
 </p>
 
 <p align="center">
-  <em>A next-generation intrinsically-driven, autonomous decision-making agent framework</em>
+  <em>A next-generation intrinsically-driven, autonomous decision-making agent framework built on NoneBot2</em>
+</p>
+
+<p align="center">
+  Declarative Cognitive Topology · Three-Tier Unified Memory · Unified LLM Gateway
 </p>
 
 <p align="center">
@@ -22,15 +26,49 @@
 
 ## Quick Navigation
 
-| Document                                                                                 | Description                                                            |
-| ---------------------------------------------------------------------------------------- | ---------------------------------------------------------------------- |
-| [Overview](https://www.aurorabot.org/start/overview.html)                                | Quickly understand AuroraBot's positioning and four-layer architecture |
-| [Getting Started](https://www.aurorabot.org/start/getting-started.html)                  | Get the project up and running from scratch                            |
-| [System Architecture](https://www.aurorabot.org/architecture/system-overview.html)       | Understand the Apps / Platform / Kernel / Brain layers                 |
-| [Cognitive Architecture](https://www.aurorabot.org/architecture/brain-architecture.html) | Dive deep into the directed cyclic graph Agent node network            |
-| [Platform Runtime](https://www.aurorabot.org/architecture/platform-runtime.html)         | Understand the runtime relationship between host and App               |
-| [App Development Guide](https://www.aurorabot.org/develop/app-development.html)          | Develop your own App                                                   |
-| [AUR CLI](https://www.aurorabot.org/develop/aur-cli.html)                                | Application development toolchain                                      |
+### Getting Started
+
+| Document                                                                              | Description                                                       |
+| ------------------------------------------------------------------------------------- | ----------------------------------------------------------------- |
+| [Overview](https://www.aurorabot.org/start/overview.html)                             | Quickly understand AuroraBot's positioning and four-layer architecture |
+| [Getting Started](https://www.aurorabot.org/start/getting-started.html)               | Get the project up and running from scratch                       |
+| [Configuration](https://www.aurorabot.org/start/configuration.html)                   | Environment variables, platform config, app config & persona docs |
+| [Offline Docsite](https://www.aurorabot.org/start/offline-docsite.html)               | Preview the documentation site locally offline                    |
+
+### Architecture
+
+| Document                                                                                | Description                                                              |
+| --------------------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
+| [System Architecture](https://www.aurorabot.org/architecture/system-overview.html)      | Understand the Apps / Platform / Kernel / Brain layers                   |
+| [Platform Runtime](https://www.aurorabot.org/architecture/platform-runtime.html)        | Understand the runtime relationship between host and App                 |
+| [Kernel Runtime](https://www.aurorabot.org/architecture/kernel-runtime.html)            | Circuit + EventBridge startup, scheduling, and shutdown                  |
+| [Cognitive Architecture](https://www.aurorabot.org/architecture/brain-architecture.html)| File-driven cognitive pipeline and currently enabled topology            |
+| [Node System](https://www.aurorabot.org/architecture/node-system.html)                  | Node / Agent / Router data structures, event bus, and state machine      |
+| [Memory System](https://www.aurorabot.org/architecture/memory-system.html)              | L1 / L2 / L3 three-tier unified memory storage and retrieval             |
+
+### Development
+
+| Document                                                                                | Description                                        |
+| --------------------------------------------------------------------------------------- | -------------------------------------------------- |
+| [Brain Node Development](https://www.aurorabot.org/develop/brain-node-development.html) | Write Agent / Router nodes                         |
+| [App Development Guide](https://www.aurorabot.org/develop/app-development.html)         | Develop your own App from structure to lifecycle   |
+| [AUR CLI](https://www.aurorabot.org/develop/aur-cli.html)                               | Application development toolchain roadmap          |
+
+### Q&A
+
+| Document                                                                            | Description                                                    |
+| ----------------------------------------------------------------------------------- | -------------------------------------------------------------- |
+| [Cross-Platform](https://www.aurorabot.org/qa/cross-platform.html)                  | OS and deployment environment compatibility                     |
+| [Multi-IM Support](https://www.aurorabot.org/qa/about-multi-im.html)                | Architecture design and extension for multiple chat platforms   |
+| [About Adapters](https://www.aurorabot.org/qa/about-adapters.html)                  | NapCat, NoneBot2 adapters, and protocol clients                 |
+| [About OneBot Protocol](https://www.aurorabot.org/qa/about-onebot.html)             | Introduction to the OneBot v11 standard protocol                |
+
+### Appendix
+
+| Document                                                                                        | Description                                                     |
+| ----------------------------------------------------------------------------------------------- | --------------------------------------------------------------- |
+| [Kernel Runtime Flow](https://www.aurorabot.org/appendix/kernel-runtime-flow.html)              | Sequence diagrams for startup, runtime, and event processing    |
+| [Cognitive Engine Whitepaper](https://www.aurorabot.org/appendix/cortex-forge-whitebook.html)   | Design philosophy: file-driven, event bus, declarative topology |
 
 ## Open Source Acknowledgements
 

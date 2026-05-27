@@ -152,6 +152,7 @@ legacy/
 .cursor/
 .idea/
 .trae/
+*.code-workspace
 node_modules/
 .vitepress/cache/
 .vitepress/dist/

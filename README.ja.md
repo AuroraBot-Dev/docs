@@ -9,7 +9,11 @@
 </p>
 
 <p align="center">
-  <em>新世代の内発的・自律的意思決定エージェントフレームワーク</em>
+  <em>NoneBot2 ベースの新世代の内発的・自律的意思決定エージェントフレームワーク</em>
+</p>
+
+<p align="center">
+  宣言的認知トポロジー · 三層連合記憶 · 統一 LLM ゲートウェイ
 </p>
 
 <p align="center">
@@ -22,15 +26,49 @@
 
 ## クイックナビゲーション
 
-| ドキュメント                                                                               | 説明                                                |
-| ------------------------------------------------------------------------------------------ | --------------------------------------------------- |
-| [概要](https://www.aurorabot.org/start/overview.html)                                      | AuroraBot の位置付けと4層アーキテクチャを素早く理解 |
-| [クイックスタート](https://www.aurorabot.org/start/getting-started.html)                   | プロジェクトをゼロから起動する                      |
-| [システムアーキテクチャ](https://www.aurorabot.org/architecture/system-overview.html)      | Apps / Platform / Kernel / Brain の4層を理解する    |
-| [認知アーキテクチャ](https://www.aurorabot.org/architecture/brain-architecture.html)       | 有向有環グラフの Agent ノードネットワークを深掘り   |
-| [プラットフォームランタイム](https://www.aurorabot.org/architecture/platform-runtime.html) | ホストと App のランタイム関係を理解する             |
-| [App 開発ガイド](https://www.aurorabot.org/develop/app-development.html)                   | 独自の App を開発する                               |
-| [AUR CLI](https://www.aurorabot.org/develop/aur-cli.html)                                  | アプリケーション開発ツールチェーン                  |
+### はじめに
+
+| ドキュメント                                                                           | 説明                                                              |
+| -------------------------------------------------------------------------------------- | ----------------------------------------------------------------- |
+| [概要](https://www.aurorabot.org/start/overview.html)                                  | AuroraBot の位置付けと4層アーキテクチャを素早く理解              |
+| [クイックスタート](https://www.aurorabot.org/start/getting-started.html)               | プロジェクトをゼロから起動する                                    |
+| [設定](https://www.aurorabot.org/start/configuration.html)                             | 環境変数、プラットフォーム設定、アプリ設定、ペルソナドキュメント   |
+| [オフラインドキュメント](https://www.aurorabot.org/start/offline-docsite.html)         | ドキュメントサイトをローカルでオフライン表示                      |
+
+### アーキテクチャ
+
+| ドキュメント                                                                             | 説明                                                                  |
+| ---------------------------------------------------------------------------------------- | --------------------------------------------------------------------- |
+| [システムアーキテクチャ](https://www.aurorabot.org/architecture/system-overview.html)    | Apps / Platform / Kernel / Brain の4層を理解する                      |
+| [プラットフォームランタイム](https://www.aurorabot.org/architecture/platform-runtime.html) | ホストと App のランタイム関係を理解する                               |
+| [カーネルランタイム](https://www.aurorabot.org/architecture/kernel-runtime.html)         | Circuit + EventBridge の起動、スケジューリング、停止                  |
+| [認知アーキテクチャ](https://www.aurorabot.org/architecture/brain-architecture.html)     | ファイル駆動の認知パイプラインと現在有効なトポロジー                  |
+| [ノードシステム](https://www.aurorabot.org/architecture/node-system.html)                | Node / Agent / Router のデータ構造、イベントバス、状態マシン          |
+| [記憶システム](https://www.aurorabot.org/architecture/memory-system.html)                | L1 / L2 / L3 三層連合記憶の保存と検索                                 |
+
+### 開発
+
+| ドキュメント                                                                               | 説明                                           |
+| ------------------------------------------------------------------------------------------ | ---------------------------------------------- |
+| [認知ノード開発](https://www.aurorabot.org/develop/brain-node-development.html)            | Agent / Router ノードを作成する                |
+| [App 開発ガイド](https://www.aurorabot.org/develop/app-development.html)                   | 構造からライフサイクルまで自作 App を開発      |
+| [AUR CLI](https://www.aurorabot.org/develop/aur-cli.html)                                  | アプリケーション開発ツールチェーンロードマップ |
+
+### Q&A
+
+| ドキュメント                                                                      | 説明                                                   |
+| --------------------------------------------------------------------------------- | ------------------------------------------------------ |
+| [クロスプラットフォーム](https://www.aurorabot.org/qa/cross-platform.html)         | OS とデプロイ環境の互換性                              |
+| [マルチIM対応](https://www.aurorabot.org/qa/about-multi-im.html)                   | 複数チャットプラットフォームのアーキテクチャと拡張方法 |
+| [アダプターについて](https://www.aurorabot.org/qa/about-adapters.html)             | NapCat、NoneBot2 アダプター、プロトコルクライアント    |
+| [OneBotプロトコルについて](https://www.aurorabot.org/qa/about-onebot.html)         | OneBot v11 標準プロトコルの概要                        |
+
+### 付録
+
+| ドキュメント                                                                                     | 説明                                                     |
+| ------------------------------------------------------------------------------------------------ | -------------------------------------------------------- |
+| [カーネルランタイムフロー](https://www.aurorabot.org/appendix/kernel-runtime-flow.html)           | 起動、実行、イベント処理のシーケンス図                   |
+| [認知エンジン設計ノート](https://www.aurorabot.org/appendix/cortex-forge-whitebook.html)          | ファイル駆動、イベントバス、宣言的トポロジーの設計理念   |
 
 ## オープンソース謝辞
 
