@@ -13,10 +13,11 @@ AuroraBot 是一个基于 NoneBot2 的智能体框架。项目将系统划分为
 - **认知** (`brain`) 负责组织包括事件桥、节点、记忆系统等有关认知的组件
 
 ::: tip
-**CortexForge** 为认知引擎的内部代号。其分为两个部分:
+**CortexForge** 为认知引擎的内部代号。当前内核为 **Kernel-γ**：
 
-- **内核**: 现阶段为 **kernel-α** 内核, 认知电路拓扑结构不够完善, 会逐步集成更多认知节点。
-- **记忆**: 现阶段为 **memory-α** 记忆系统, 为三级联合记忆存储与检索。
+- **Pool A (自我之流)**: 第一人称 Markdown 叙事 (`self/stream/now.md`)，维护完整的自我认知流。
+- **Pool B (神经JSON系统)**: 无状态 JSON 文件流转——收束、内化、外化、派发。
+- **两转义者**: Internalizer (B→A) 将结构化事件转为第一人称体验；Externalizer (A→B) 将自我决定转为结构化动作。
 
 :::
 
@@ -51,33 +52,34 @@ flowchart LR
     AGENT <--> ROUTER
 ```
 
-启动后 `main.py` 创建两个 `asyncio.Task`：
+启动后通过 `RuntimeState` 管理两条协程线：
 
 - **App 循环** — 定时 `host.tick()`，遍历所有 App 的 `on_tick()`
-- **事件桥** — 轮询 `host.drain_events()`，将 `AppEvent` 转为 JSON 写入 `data/kernel/`，文件落盘自动触发节点执行
+- **事件桥 + 认知电路** — 轮询 `host.drain_events()`，将 `AppEvent` 转为 JSON 写入 `data/kernel/`，文件落盘自动触发节点执行
 
 `Circuit` 启动时内部创建 `dispatch_forever` 协程 + 每个节点的 `run()` 协程。节点按 `topology.yaml` 配置自动连边，通过文件模式隐式确定上下游。
 
-## 认知电路
+## 认知管线 (Kernel-γ)
 
-::: warning
-当前内核为 **kernel-α** 内核, 认知电路拓扑结构不够完善, 会逐步集成更多认知节点。
-:::
-
-拓扑配置中 `enabled: true` 的节点：
+拓扑配置中 `enabled: true` 的节点构成当前管线：
 
 ```
-外部事件 → FanOutRouter → ReflexRouter（短路径：规则命中直接响应）
-                        → PlanAgent → ExpandAgent → ExecuteAgent（长路径：LLM 全链路）
+外部事件 → MessagePreprocessor（收束+防抖）→ Internalizer（B→A 内化）
+         → Externalizer（A→B 外化）→ CommandDispatcher（命令派发）
 ```
 
-- **FanOutRouter** — 将 inbox 事件扇出到下游 pending 目录
-- **ReflexRouter** — 纯规则匹配，命中则直接产出 action（零 LLM）
-- **PlanAgent** — 调用 LLM 将事件组整合为计划
-- **ExpandAgent** — 调用 LLM 将计划展开为具体的命令调用
-- **ExecuteAgent** — 调用 App 命令执行，LLM 判定结果
+同时运行的节律环路：
 
-三个节点（`HeartbeatRouter` / `GoalGeneratorAgent` / `ReflexLearnerAgent`）已在代码中实现但拓扑配置中处于禁用状态。
+```
+HeartbeatGenerator（60s 心跳）→ TimerScheduler（cron 匹配）→ 同一条管线
+```
+
+- **MessagePreprocessor** — 事件收束 & 消息防抖，所有事件一视同仁格式化
+- **Internalizer** — LLM 驱动的 B→A 转义者，将结构化事件转为第一人称体验叙事，追加到自我之流
+- **Externalizer** — LLM 驱动的 A→B 转义者，从自我之流中识别行动意图，转译为 JSON 命令
+- **CommandDispatcher** — 纯机械派发，解析 JSON 动作并通过 ApplicationHost 执行
+
+旧 Kernel-β 节点 (ImpulseGate / ActionPlanner / PolarisAgent 等) 已在拓扑中禁用，保留代码供参考。
 
 ## 适合的场景
 
@@ -94,13 +96,18 @@ flowchart LR
 - 应用发现、注册、生命周期管理（`ApplicationHost` + `PlatformAPI`）
 - 文件事件总线 + 节点调度循环（`Circuit` + `FileEventBus`）
 - 声明式拓扑配置（`topology.yaml` 邻接表）
-- 基础应用已实现：QQ 接入、Alarm、Diary、Clock、Example
+- 自我之流 (SelfStream): `now.md` / `state.md` / `memories/` / `archive/` / `diary/`
+- 多角色统一模型网关 (ModelGateway): fast / quality / multimodal / embedding
+- 节律系统: HeartbeatGenerator + TimerScheduler
+- 本地控制台 (localhost): 命令行交互式调试
+- 基础应用已实现：QQ 接入、Alarm、Diary、Clock
 - 三级记忆系统（L1 工作记忆 / L2 情景记忆 / L3 语义记忆）
 
 ## 当前边界
 
 - 仅支持 QQ 接入（通过 NapCat + onebot 适配器）
 - 认知节点体系可扩展，但尚无插件化标准和开发工具链
+- MemoryConsolidator / MetricsCollector 等节点已实现但未启用
 - 部分应用未完整实现
 
 ## 下一步

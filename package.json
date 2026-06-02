@@ -1,7 +1,7 @@
 {
   "name": "aurorabot-docs",
   "private": true,
-  "version": "0.0.4",
+  "version": "0.4.0",
   "description": "AuroraBot 文档站",
   "scripts": {
     "dev": "vitepress dev . --host 0.0.0.0 --port 5173",

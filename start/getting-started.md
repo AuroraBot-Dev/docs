@@ -59,10 +59,10 @@ cp .env.example .env
 # 适配器配置
 ONEBOT_ACCESS_TOKEN=
 
-# 模型配置
-DEEPSEEK_URL_BASE=https://api.deepseek.com
-DEEPSEEK_API_KEY=
-LITELLM_MODEL=deepseek/deepseek-v4-flash
+# 模型网关配置 (多角色)
+LLM_GATEWAY_FAST_MODEL=openai/gpt-4o-mini
+LLM_GATEWAY_QUALITY_MODEL=openai/gpt-4o
+LLM_GATEWAY_MULTIMODAL_MODEL=openai/gpt-4o
 
 # 记忆配置
 MEM0_VECTOR_STORE=chroma
@@ -89,13 +89,19 @@ uv run bot.py
 ```
 
 ::: tip
-此时你的Bot将会以默认人格**小光**启动，但是你还没有手段来与她互动. 你可以启动你的应用适配器，例如 [NapCat](https://github.com/NapNeko/NapCatQQ), 然后就可以试着向她发送消息了!
+此时你的Bot将会以默认人格**小光**启动。启动后你会看到一个交互式控制台 (`localhost`)，可以直接在命令行中与她对话：
+
+- 直接输入文字即可向"小光"发送消息
+- 输入 `:help` 查看可用命令（`:say` 注入消息、`:invoke` 调用命令、`:emit` 注入事件、`:self` 查看自我之流等）
+- 输入 `:quit` 退出
+
+无需任何应用或适配器即可在控制台中体验完整的认知管线！
 :::
 
 ::: tip
-由于AuroraBot 是一个基于 NoneBot2 框架的再封装框架, 所以你可以参考 [NapCat 官方文档](https://napneko.github.io/use/integration#nonebot) 来对接你的 NapCat 适配器.
+如果想接入 QQ，可以启动你的应用适配器，例如 [NapCat](https://github.com/NapNeko/NapCatQQ)。由于 AuroraBot 基于 NoneBot2 框架，你可以参考 [NapCat 官方文档](https://napneko.github.io/use/integration#nonebot) 来对接 NapCat 适配器。
 :::
 
 ::: info
-框架第一适配 NapCat 适配器. 其他适配器将在后续测试后逐渐开放.
+框架第一适配 NapCat 适配器。其他适配器将在后续测试后逐渐开放。
 :::

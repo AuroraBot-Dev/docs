@@ -55,7 +55,7 @@ class Agent(Node):
 持有 `_host`（ApplicationHost 引用）、`_system_prompt`（注入 LLM 的消息）、`_memory`（UnifiedMemoryManager 引用）。
 
 ::: tip
-Agent 在执行时通常调用 `llm_chat()` 函数（`src/brain/ai/llm_gate.py`）——项目内所有 LLM 调用的唯一入口。
+Agent 通过 `self.think(messages)` 方法调用 LLM（`Agent` 基类方法），底层走 `ModelGateway`（`src/brain/ai/gateway.py`）——项目内所有 LLM 调用的统一入口。支持 `gateway.fast` / `gateway.quality` / `gateway.multimodal` 多角色。
 :::
 
 ## Router
@@ -174,35 +174,50 @@ Circuit 与 EventBridge 的完整协作流程见 [内核运行时](./kernel-runt
 
 ## 已实现的节点列表
 
+### Agent 节点 (LLM 驱动)
+
 `src/brain/nodes/agents/`：
 
-| 文件                      | 注册名           | 职责                     |
-| ------------------------- | ---------------- | ------------------------ |
-| `plan_agent.py`           | `planner`        | LLM 将事件组整合为计划   |
-| `expand_agent.py`         | `expander`       | LLM 将计划展开为命令调用 |
-| `execute_agent.py`        | `executor`       | 调用命令并 LLM 判定结果  |
-| `goal_generator_agent.py` | `goal_generator` | 沉默时主动生成意图       |
-| `reflex_learner_agent.py` | `reflex_learner` | 从成功动作中提取规则     |
+| 文件                       | 注册名               | 状态     | 职责                                |
+| -------------------------- | -------------------- | -------- | ----------------------------------- |
+| `internalizer.py`          | `internalizer`       | ✅ 启用  | B→A 转义者：事件 → 第一人称体验     |
+| `externalizer.py`          | `externalizer`       | ✅ 启用  | A→B 转义者：自我决定 → JSON 动作    |
+| `memory_consolidator.py`   | `memory_consolidator`| 禁用     | 记忆沉淀与 now.md 归档              |
+| `action_planner.py`        | `action_planner`     | 禁用     | (旧 Kernel-β) LLM 动作规划          |
+| `impulse_gate.py`          | `impulse_gate`       | 禁用     | (旧 Kernel-β) 门控判断              |
+| `polaris_agent.py`         | `polaris`            | 禁用     | (旧 Kernel-α) 单体 Agent            |
+
+### Router 节点 (纯机械)
 
 `src/brain/nodes/routers/`：
 
-| 文件                  | 注册名      | 职责                      |
-| --------------------- | ----------- | ------------------------- |
-| `fanout_router.py`    | `fanout`    | 扇出事件到多个下游        |
-| `reflex_router.py`    | `reflex`    | 规则匹配，直接产出 action |
-| `switch_router.py`    | `switch`    | 条件分支                  |
-| `merge_router.py`     | `merge`     | 归并多个文件              |
-| `heartbeat_router.py` | `heartbeat` | 定时自触发脉冲            |
-| `terminal_router.py`  | `terminal`  | 关闭子图、移入归档        |
-| `memory_router.py`    | `memory`    | 写入三级记忆              |
+| 文件                      | 注册名                | 状态     | 职责                         |
+| ------------------------- | --------------------- | -------- | ---------------------------- |
+| `message_preprocessor.py` | `message_preprocessor`| ✅ 启用  | 事件收束 & 消息防抖          |
+| `command_dispatcher.py`   | `command_dispatcher`  | ✅ 启用  | JSON 解析 → 命令派发         |
+| `heartbeat_generator.py`  | `heartbeat_generator` | ✅ 启用  | 周期性心跳 (60s)             |
+| `timer_scheduler.py`      | `timer_scheduler`     | ✅ 启用  | cron 规则 → 节律触发器       |
+| `metrics_collector.py`    | `metrics_collector`   | 禁用     | 文件流转统计                 |
+| `switch_router.py`        | `switch_router`       | 禁用     | 条件分支                     |
+| `merge_router.py`         | `merge_router`        | 禁用     | 归并多个文件                 |
+| `broadcast_router.py`     | `broadcast_router`    | 禁用     | 广播到多个下游               |
+| `dead_letter_router.py`   | `dead_letter_router`  | 禁用     | 超期文件回收                 |
+
+### 非节点组件
+
+| 文件                        | 类               | 职责                                |
+| --------------------------- | ---------------- | ----------------------------------- |
+| `src/brain/nodes/self_stream.py` | `SelfStream` | Pool A 数据访问层 (now.md / state.md / memories/) |
+| `src/brain/nodes/event_bridge.py`| (函数)      | AppEvent → 文件事件 桥接            |
 
 ## 设计约束
 
-- Agent 不直接调用 LLM API — 走 `llm_chat()` 统一入口 (`src/brain/ai/llm_gate.py`)
+- Agent 不直接调用 LLM API — 走 `ModelGateway` 统一入口 (`src/brain/ai/gateway.py`)
 - 节点间不直接通信，仅通过文件 (`FileEventBus`) 传递数据
 - 节点无内部状态 (LLM 上下文除外)，`execute()` 后可回收
 - 文件生命周期: `pending/` → `done/` → `archived/`
 - 同一文件并发写入由 `FileEventBus.apply_update()` 的 `asyncio.Lock` 串行化
+- Agent 通过 `self.think(messages)` 调用 LLM（`Agent` 基类方法），底层走 `gateway.quality` 或 `gateway.fast`
 
 ## 下一步阅读
 

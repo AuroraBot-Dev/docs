@@ -30,13 +30,17 @@ AuroraBot 采用配置分离的策略：分为框架配置/环境变量、平台
 | --------------------- | --------------- | ------ |
 | `ONEBOT_ACCESS_TOKEN` | OneBot 访问令牌 | 字符串 |
 
-#### 模型配置
+#### 模型网关配置
 
-| 变量                | 说明              | 可选值 |
-| ------------------- | ----------------- | ------ |
-| `DEEPSEEK_URL_BASE` | DeepSeek API 地址 | URL    |
-| `DEEPSEEK_API_KEY`  | DeepSeek API 密钥 | 字符串 |
-| `LITELLM_MODEL`     | LiteLLM 模型标识  | 字符串 |
+基于 litellm 的多角色统一网关。模型标识格式为 `provider/model_name`：
+
+| 变量                          | 说明                   | 默认值                       |
+| ----------------------------- | ---------------------- | ---------------------------- |
+| `LLM_GATEWAY_FAST_MODEL`      | fast 角色模型 (轻量)   | `openai/gpt-4o-mini`         |
+| `LLM_GATEWAY_QUALITY_MODEL`   | quality 角色模型 (强)  | `openai/gpt-4o`              |
+| `LLM_GATEWAY_MULTIMODAL_MODEL`| multimodal 角色模型    | `openai/gpt-4o`              |
+| `LLM_GATEWAY_EMBEDDING_MODEL` | embedding 模型         | `openai/text-embedding-3-small` |
+| `LLM_GATEWAY_RERANKER_MODEL`  | reranker 模型 (可选)   | (空)                         |
 
 #### 记忆配置
 
@@ -51,26 +55,34 @@ AuroraBot 采用配置分离的策略：分为框架配置/环境变量、平台
 | `MEM0_EMBEDDER_BASE_URL` | Embedding API 地址         | `https://api.siliconflow.cn/v1/` |
 | `MEM0_EMBEDDER_MODEL`    | Embedding 模型             | `BAAI/bge-m3`                    |
 | `MEM0_LLM_PROVIDER`      | mem0 内置 LLM 提供方       | `deepseek`                       |
-| `MEM0_LLM_API_KEY`       | mem0 LLM API 密钥（必填）  | 同 `DEEPSEEK_API_KEY`            |
+| `MEM0_LLM_API_KEY`       | mem0 LLM API 密钥（必填）  | 同 LLM 网关密钥                  |
 | `MEM0_LLM_BASE_URL`      | mem0 LLM API 地址          | `https://api.deepseek.com`       |
 | `MEM0_LLM_MODEL`         | mem0 LLM 模型              | `deepseek-v4-flash`              |
+| `MEMORY_MODEL_PROVIDER`  | 记忆模型提供方             | `litellm`                        |
 
 #### 运行配置
 
-| 变量                 | 说明       | 可选值                                                |
-| -------------------- | ---------- | ----------------------------------------------------- |
-| `RUN_MODE`           | 启动模式   | `app`（仅应用层）/ `agent`（仅内核） / `prod`（全量） |
-| `HEARTBEAT_INTERVAL` | 心跳间隔   | 浮点数（秒）                                          |
-| `APP_FRAME_INTERVAL` | 应用帧间隔 | 浮点数（秒）                                          |
+| 变量                   | 说明         | 可选值                                                        |
+| ---------------------- | ------------ | ------------------------------------------------------------- |
+| `RUN_MODE`             | 启动模式     | `app` / `application` / `agent` / `core` / `dev` / `prod`    |
+| `HEARTBEAT_INTERVAL`   | 心跳间隔     | 浮点数（秒），默认 `1.0`                                      |
+| `APP_FRAME_INTERVAL`   | 应用帧间隔   | 浮点数（秒），默认 `1.0`                                      |
+| `EVENT_BRIDGE_INTERVAL`| 事件桥轮询间隔 | 浮点数（秒），默认 `1.5`                                    |
+
+#### 超时配置
+
+| 变量                      | 说明                 | 默认值 |
+| ------------------------- | -------------------- | ------ |
+| `LLM_GATE_TIMEOUT`        | LLM 网关超时 (秒)    | `30`   |
+| `MEMORY_RETRIEVE_TIMEOUT` | 记忆检索超时 (秒)    | `30`   |
 
 #### 日志配置
 
-| 变量                       | 说明               | 可选值           |
-| -------------------------- | ------------------ | ---------------- |
-| `LLM_LOG_QUERY`            | 记录 LLM 查询      | `true` / `false` |
-| `LLM_LOG_RESPONSE`         | 记录 LLM 响应      | `true` / `false` |
-| `CAPABILITY_LOG_EXECUTION` | 记录能力执行日志   | `true` / `false` |
-| `LLM_LOG_MAX_CHARS`        | LLM 日志最大字符数 | 整数             |
+| 变量                                    | 说明               | 可选值           |
+| --------------------------------------- | ------------------ | ---------------- |
+| `LLM_GATEWAY_ENABLE_LOGGING_QUERIES`    | 记录 LLM 查询      | `true` / `false` |
+| `LLM_GATEWAY_ENABLE_LOGGING_RESPONSES`  | 记录 LLM 响应      | `true` / `false` |
+| `LOG_LEVEL`                             | 日志级别           | `DEBUG` / `INFO` / `WARNING` / `ERROR` |
 
 ## 平台配置
 

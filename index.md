@@ -20,22 +20,22 @@ hero:
       link: /develop/app-development.html
 
 features:
+  - icon: 🌊
+    title: 双池认知架构 (Pool A / Pool B)
+    details: Pool A 维护第一人称"自我之流" (now.md)，Pool B 以 JSON 文件驱动无状态路由与派发。两池之间由 Internalizer 和 Externalizer 两个转义者桥接。
   - icon: 🧠
     title: 文件驱动认知管道
-    details: Node / Agent / Router 节点通过事件总线协作，topology.yaml 声明式配置邻接关系，文件落盘自动触发下游节点。
+    details: Node / Agent / Router 节点通过 FileEventBus 事件总线协作，topology.yaml 声明式配置邻接关系，文件落盘自动触发下游节点。
   - icon: 📔
-    title: 三级联合记忆
-    details: L1 工作记忆 / L2 情景记忆 / L3 语义记忆，通过 UnifiedMemoryManager 统一写入与检索。
+    title: 三级联合记忆 + 自我之流
+    details: L1 工作记忆 / L2 情景记忆 / L3 语义记忆，通过 UnifiedMemoryManager 统一存取。自我之流 (SelfStream) 提供第一人称叙事式记忆载体。
   - icon: 🤖
-    title: 统一 LLM 网关
-    details: 基于 litellm，所有 LLM 调用走 llm_chat() 统一入口，支持重试与错误分级。
+    title: 多角色统一模型网关
+    details: 基于 litellm 的 ModelGateway，支持 fast / quality / multimodal / embedding 多角色，流式打断、费用追踪、异常分类。
+  - icon: ⏱️
+    title: 节律系统
+    details: HeartbeatGenerator + TimerScheduler 构成自主节律环路，她感知时间流逝——整点、早晨、深夜——如同另一种感官。
   - icon: 🧩
     title: App 插件体系
     details: 每个 App 通过 manifest.yaml 声明能力，PlatformAPI 统一交互，按需启用。
-  - icon: 📝
-    title: 声明式配置
-    details: 认知拓扑 / 应用配置 / 系统参数均通过 YAML 和环境变量管理，无需修改框架代码。
-  - icon: 📖
-    title: 文档驱动开发
-    details: 随提交更新的项目文档站，保证文档与代码同步更新。
 ---

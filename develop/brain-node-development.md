@@ -57,7 +57,7 @@ NODE_REGISTRY: dict[str, type[Node]] = {
 }
 ```
 
-如果节点需要 `host` 引用或接收额外 `config`，需要在 `NODE_NEEDS_HOST` / `NODE_ACCEPTS_CONFIG` 中声明。
+如果节点需要 `host` 引用、接收额外 `config` 或需要 `UnifiedMemoryManager`，需要在 `NODE_NEEDS_HOST` / `NODE_ACCEPTS_CONFIG` / `NODE_NEEDS_MEMORY` 中声明。
 
 ### 3. 在拓扑配置中启用
 
@@ -80,25 +80,28 @@ nodes:
 
 `src/brain/nodes/agents/` 下已实现的 Agent：
 
-| 文件                      | 节点类型（注册名） | 职责                     |
-| ------------------------- | ------------------ | ------------------------ |
-| `plan_agent.py`           | `planner`          | 用 LLM 将事件转为计划    |
-| `expand_agent.py`         | `expander`         | 用 LLM 展开计划为动作    |
-| `execute_agent.py`        | `executor`         | 调用 App 命令并判断结果  |
-| `goal_generator_agent.py` | `goal_generator`   | 沉默时主动生成意图       |
-| `reflex_learner_agent.py` | `reflex_learner`   | 从成功动作中学习反射规则 |
+| 文件                       | 节点类型（注册名）    | 状态     | 职责                          |
+| -------------------------- | --------------------- | -------- | ----------------------------- |
+| `internalizer.py`          | `internalizer`        | ✅ 启用  | B→A 转义者：事件→第一人称体验 |
+| `externalizer.py`          | `externalizer`        | ✅ 启用  | A→B 转义者：自我决定→JSON动作 |
+| `memory_consolidator.py`   | `memory_consolidator` | 禁用     | 记忆沉淀与归档                |
+| `action_planner.py`        | `action_planner`      | 禁用     | (旧) LLM 动作规划             |
+| `impulse_gate.py`          | `impulse_gate`        | 禁用     | (旧) 门控判断                 |
+| `polaris_agent.py`         | `polaris`             | 禁用     | (旧) 单体 Agent               |
 
 `src/brain/nodes/routers/` 下已实现的 Router：
 
-| 文件                  | 节点类型（注册名） | 职责                   |
-| --------------------- | ------------------ | ---------------------- |
-| `switch_router.py`    | `switch`           | 条件分支               |
-| `merge_router.py`     | `merge`            | 归并多个文件           |
-| `heartbeat_router.py` | `heartbeat`        | 定时脉冲               |
-| `reflex_router.py`    | `reflex`           | 反射规则匹配（短路径） |
-| `fanout_router.py`    | `fanout`           | 扇出到多个下游         |
-| `terminal_router.py`  | `terminal`         | 关闭子图               |
-| `memory_router.py`    | `memory`           | 写入记忆存储           |
+| 文件                      | 节点类型（注册名）     | 状态     | 职责                    |
+| ------------------------- | ---------------------- | -------- | ----------------------- |
+| `message_preprocessor.py` | `message_preprocessor` | ✅ 启用  | 事件收束 & 消息防抖     |
+| `command_dispatcher.py`   | `command_dispatcher`   | ✅ 启用  | JSON 解析 → 命令派发    |
+| `heartbeat_generator.py`  | `heartbeat_generator`  | ✅ 启用  | 周期性心跳 (60s)        |
+| `timer_scheduler.py`      | `timer_scheduler`      | ✅ 启用  | cron 规则 → 节律触发器  |
+| `metrics_collector.py`    | `metrics_collector`    | 禁用     | 文件流转统计            |
+| `switch_router.py`        | `switch_router`        | 禁用     | 条件分支                |
+| `merge_router.py`         | `merge_router`         | 禁用     | 归并多个文件            |
+| `broadcast_router.py`     | `broadcast_router`     | 禁用     | 广播到多个下游          |
+| `dead_letter_router.py`   | `dead_letter_router`   | 禁用     | 超期文件回收            |
 
 ## 设计约束
 

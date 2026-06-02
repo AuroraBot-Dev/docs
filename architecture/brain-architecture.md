@@ -1,110 +1,181 @@
 ---
 title: 认知引擎架构
-description: 文件驱动、事件总线与声明式拓扑的认知管道——Node、FileEvent、Circuit 的工作原理。
+description: Kernel-γ 双池认知架构——Pool A 自我之流、Pool B 神经JSON系统、两转义者。
 order: 4
 ---
 
 # 认知引擎架构
 
-AuroraBot 的认知引擎（内部代号 CortexForge）是项目的核心。它由两个子系统构成:
+AuroraBot 的认知引擎（内部代号 CortexForge）当前运行 **Kernel-γ** 内核。核心理念：**她不是在处理消息，而是在体验生命。**
 
-| 子系统                | 文档                           | 职责                                           |
-| --------------------- | ------------------------------ | ---------------------------------------------- |
-| **kernel** (节点系统) | [节点系统](./node-system.md)   | Node / Agent / Router / FileEventBus / Circuit |
-| **memory** (记忆系统) | [记忆系统](./memory-system.md) | L1 工作记忆 / L2 情景记忆 / L3 语义记忆        |
+## 双池架构 (Pool A / Pool B)
 
-基本工作方式:
+Kernel-γ 将认知分为两个**物理隔离**的上下文池：
 
-- 外部事件以 JSON 文件的形式写入 `data/kernel/` 目录
-- 文件落盘触发 `FileEvent`，通过事件总线广播
-- 节点根据 `topology.yaml` 中的声明匹配事件，激活后执行，产出新文件
-- 新文件再次触发下游节点
-- 认知管道中需要"记忆"的环节，节点通过 `UnifiedMemoryManager` 存取 L1/L2/L3 记忆
+| 池                      | 格式            | 语态             | 职责                       |
+| ----------------------- | --------------- | ---------------- | -------------------------- |
+| **Pool A —— 自我之流**  | Markdown 纯文本 | 第一人称 "我..." | 维护完整的自我认知叙事     |
+| **Pool B —— 神经JSON系统** | JSON 结构化 | 无主语           | 无状态处理、路由、派发     |
+
+两个池子之间，由**两个转义者**桥接：
+
+```
+Pool B (JSON)  ──→  Internalizer (内化者)  ──→  Pool A (Markdown)
+Pool A (Markdown) ──→  Externalizer (外化者) ──→  Pool B (JSON)
+```
 
 ## 子系统概览
 
-### kernel — 节点系统
+| 子系统                | 文档                           | 职责                                                    |
+| --------------------- | ------------------------------ | ------------------------------------------------------- |
+| **kernel** (节点系统) | [节点系统](./node-system.md)   | Node / Agent / Router / FileEventBus / Circuit          |
+| **memory** (记忆系统) | [记忆系统](./memory-system.md) | L1/L2/L3 三级记忆 + SelfStream 自我之流                 |
+| **ai** (模型网关)     | (本文档)                       | ModelGateway 多角色统一网关 (fast/quality/multimodal)   |
+| **localhost** (控制台)| (本文档)                       | 命令行交互式调试                                        |
 
-认知管道的执行单元。详见 [节点系统](./node-system.md)。
+## Pool A: 自我之流 (The Self-Stream)
 
-- **Node** 抽象基类: `on_event()` 匹配文件事件 → `execute()` 执行逻辑 → 产出 `FileUpdate`
-- **Agent** (LLM 驱动): PlanAgent、ExpandAgent、ExecuteAgent 等，调用 `llm_chat()` 做推理
-- **Router** (纯逻辑): FanOutRouter、ReflexRouter、MemoryRouter 等，执行规则匹配和路由
-- **FileEventBus**: 事件分发中枢，从 `asyncio.Queue` 取事件 → 匹配节点 → 唤醒执行
-- **Circuit**: 生命周期管理器，托管 `dispatch_forever` 和所有 `node.run()` 协程
+自我之流是她的"意识"。以第一人称 Markdown 纯文本维护，通过 `SelfStream` 类 (`src/brain/nodes/self_stream.py`) 管理。
 
-### memory — 记忆系统
+### 设计原则
 
-为节点提供持久化记忆能力。详见 [记忆系统](./memory-system.md)。
+- **纯 Markdown，无 JSON**。自我认知不应被结构化数据污染。
+- **第一人称**。每个字都以"我"为主语。
+- **顺序追加**。新体验追加到流末尾，不修改历史。
+- **自洽**。任何时候读这条流，都能看到一个完整、连贯的自我叙事。
 
-- **L1 工作记忆**: 内存 FIFO 列表，最近 10 条，不持久化
-- **L2 情景记忆**: JSON 文件追加，50 条后 LLM 压缩，按时间线检索
-- **L3 语义记忆**: ChromaDB 向量存储，LLM 提取事实 → 语义相似度检索
-- **UnifiedMemoryManager**: 统一入口，节点无需关心底层 L1/L2/L3 流转
+### 文件结构
 
-## 文件路径约定
+```
+data/kernel/self/
+├── stream/
+│   ├── now.md                  # 当前意识流（最近体验和思考）
+│   └── archive/
+│       └── 2025-03-15.md       # 每日归档
+├── state.md                    # 当前自我状态（情绪、精力、正在做的事）
+├── memories/
+│   ├── about_alice.md          # 持久记忆（按主题组织）
+│   └── ...
+└── diary/
+    └── 2025-03-15.md           # 正式日记（她决定写的）
+```
 
-事件和认知状态都以 JSON 文件的形式存放在 `data/kernel/` 下:
+### 读写规则
 
-| 目录模式           | 含义             |
-| ------------------ | ---------------- |
-| `inbox/pending/`   | 待处理的外部事件 |
-| `inbox/done/`      | 已处理的外部事件 |
-| `plans/pending/`   | 待展开的计划     |
-| `actions/pending/` | 待执行的命令     |
-| `results/pending/` | 执行结果         |
-| `heartbeat/`       | 心跳脉冲         |
-| `reflex/pending/`  | 待规则匹配的事件 |
-| `memory/pending/`  | 待写入记忆的事件 |
+| 操作           | 谁来做               | 触发条件                           |
+| -------------- | -------------------- | ---------------------------------- |
+| 追加体验       | Internalizer         | Pool B 事件被内化时                |
+| 追加思考       | 她自己 (Externalizer 上下文) | 读完 now.md 后有话想说      |
+| 更新 state.md  | Internalizer         | 情绪或状态发生变化                 |
+| 提取记忆       | MemoryConsolidator   | 定期扫描 now.md（未启用）          |
+| 归档 now.md    | 定时任务 (未启用)    | 每日或 now.md 超过阈值时           |
+
+## Pool B: 神经JSON系统 (The Nervous System)
+
+Pool B 不做任何"理解"——它只做机械性的路由、转换、派发。零 LLM 调用。
+
+### 文件结构
+
+```
+data/kernel/
+├── inbox/pending/               # 所有外部事件
+├── pipeline/
+│   ├── message_queue/           # 预处理后的体验单元
+│   ├── internalized/            # Internalizer 完成标记
+│   └── action_queue/            # 待执行的动作
+├── heartbeat/
+│   └── tick.json                # 心跳脉冲
+├── rhythm/triggers/             # 节律触发器
+└── dead_letter/                 # 超期未消费的文件（未启用）
+```
+
+### 标准信封
+
+流经 Pool B 的每个 JSON 文件包裹在统一信封中：
+
+```json
+{
+  "envelope": {
+    "id": "msg_a1b2c3d4",
+    "trace_id": "trace_x1y2z3",
+    "timestamp": "2025-03-15T10:30:00Z",
+    "source_node": "message_preprocessor",
+    "session_key": "private:user123"
+  },
+  "payload": { "..." : "节点特定数据" }
+}
+```
+
+## 两转义者：认知的核心
+
+### Internalizer（内化者）—— B → A
+
+**Agent 节点**，LLM 驱动。将 Pool B 中的结构化事件转化为 Pool A 中的第一人称体验叙事。
+
+- **输入**: `pipeline/message_queue/msg_*.json` + now.md + state.md + memories/
+- **输出**: 追加到 `self/stream/now.md`（第一人称体验叙事）
+- **提示词**: `INTERNALIZER.md`
+
+> 她不是在"格式化事件为文本"——是在用她的视角、她的记忆、她当前的状态去**理解这个事件对她的意义**。
+
+### Externalizer（外化者）—— A → B
+
+**Agent 节点**，LLM 驱动。从 Pool A 的自我之流中识别她的意图和决定，转化为 Pool B 的结构化动作。
+
+- **输入**: now.md + state.md（由 `pipeline/internalized/*.json` 触发）
+- **输出**: `pipeline/action_queue/act_*.json`（结构化动作）
+- **提示词**: `EXTERNALIZER.md`
+
+> Externalizer 不做回复决策——决策已在自我之流中做出。Externalizer 只是把**她已经做出的决定**翻译成机器可执行的形式。
 
 ## 当前启用的认知管线
 
-`topology.yaml` 中 `enabled: true` 的节点构成以下流向：
-
 ```mermaid
 flowchart LR
-    A["外部事件\n(AppEvent)"] -->|"EventBridge 写入"| B["inbox/pending/"]
-    B --> C["FanOutRouter"]
+    subgraph PoolB["Pool B (JSON)"]
+        A["外部事件\n(AppEvent)"] -->|"EventBridge 写入"| B["inbox/pending/"]
+        B --> C["MessagePreprocessor\n(收束+防抖)"]
+        C -->|"标准信封"| D["pipeline/message_queue/"]
+        D --> E["Internalizer\n(B→A 内化)"]
+        E -->|"触发标记"| F["pipeline/internalized/"]
+        F --> G["Externalizer\n(A→B 外化)"]
+        G -->|"JSON 动作"| H["pipeline/action_queue/"]
+        H --> I["CommandDispatcher\n(命令派发)"]
+    end
 
-    C -->|"复制到多个目录"| D["inbox/done/"]
-    C --> E["reflex/pending/"]
-    C --> F["memory/pending/"]
+    subgraph PoolA["Pool A (自我之流)"]
+        J["self/stream/now.md"]
+        K["self/state.md"]
+    end
 
-    D --> G["PlanAgent"]
-    G -->|"调用 LLM 生成计划"| H["plans/pending/"]
-    H --> I["ExpandAgent"]
-    I -->|"调用 LLM 匹配命令"| J["actions/pending/"]
-
-    E --> K["ReflexRouter"]
-    K -->|"规则命中"| J
-
-    J --> L["ExecuteAgent"]
-    L -->|"调用 App 命令 + LLM 判定"| M["results/pending/"]
+    E -.->|"追加体验叙事"| J
+    G -.->|"读取+思考"| J
+    G -.->|"读取"| K
+    E -.->|"更新状态"| K
 ```
 
-### 短路径 (ReflexRouter)
+## 节律环路
 
-绕过 LLM，直接做规则匹配。处理流程：
+节律不是外挂的定时任务——**时间是她的另一种感官**。
 
-1. 读取 `reflexes/rules.json` 中的规则
-2. 逐条匹配事件文本
-3. 命中则直接构造 `action.json` → 送入 `ExecuteAgent`
-4. 未命中则静默消费，事件仍走 Planner 长路径
+```
+HeartbeatGenerator (60s心跳) → TimerScheduler (cron匹配)
+  → MessagePreprocessor → Internalizer
+  → "夜深了...我想回顾今天发生了什么"
+```
 
-### 长路径 (PlanAgent → ExpandAgent → ExecuteAgent)
-
-调用 LLM 的全链路处理：
-
-- **PlanAgent** — 收集 `inbox/done/` 中的事件，按 `session_id` 分组，调用 LLM 生成整合计划
-- **ExpandAgent** — 读取计划，从 `host.list_command_specs()` 获取可用命令，调用 LLM 做语义匹配并构造参数
-- **ExecuteAgent** — 调用 `host.invoke_command()` 执行命令，LLM 判断执行结果
+TimerScheduler 产出 `rhythm/triggers/` 下的节律文件（hourly、morning、evening、midnight），通过**和消息事件完全相同的路径**进入 Pool A。
 
 ## 已实现但未启用的节点
 
 ```yaml
-- id: heartbeat # HeartbeatRouter — 定时自触发脉冲
-- id: goal-generator # GoalGeneratorAgent — 沉默时主动生成意图
-- id: reflex-learner # ReflexLearnerAgent — 从成功动作中学习新规则
+- id: memory_consolidator  # MemoryConsolidator — 记忆沉淀与归档
+- id: metrics_collector    # MetricsCollector — 文件流转统计
+- id: dead_letter          # DeadLetterRouter — 超期文件回收
+# 旧 Kernel-β 节点（全部 disabled）:
+- id: impulse_gate         # ImpulseGate
+- id: action_planner       # ActionPlanner
+- id: polaris              # PolarisAgent (旧单体)
 ```
 
 ## 下一步阅读
@@ -112,4 +183,5 @@ flowchart LR
 - 想了解节点数据结构与类型: 读 [节点系统](./node-system.html)
 - 想了解记忆存储与检索: 读 [记忆系统](./memory-system.html)
 - 想了解 Circuit 与 EventBridge 的协作细节: 读 [内核运行时](./kernel-runtime.html)
+- 想了解 Kernel-γ 的完整设计: 读 [Kernel-γ 路线图](../appendix/kernel-gamma-roadmap.html)
 - 想自己写节点: 读 [认知节点开发](../develop/brain-node-development.html)
