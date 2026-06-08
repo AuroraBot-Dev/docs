@@ -12,6 +12,10 @@ order: 2
 源码 API 文档正在施工中...
 :::
 
+::: info
+自版本 `v0.2.0` 起, 主仓库不再包含内建应用。安装应用文档正在施工中...
+:::
+
 ## 启动
 
 `start_runtime()` → `register_enabled_apps()` 负责平台侧初始化：
@@ -123,19 +127,6 @@ flowchart TB
 1. `state.stop_event.set()` — 通知所有协程停止
 2. `stop_runtime_components()` — 取消 bridge_task / circuit.stop() / app_task.cancel()
 3. `app_host.stop_all()` — 遍历所有 App 调用 `app.on_stop()`，清空实例、命令表、事件队列
-
-## 内建应用概览
-
-| App     | 靠什么知道外面的事    | 能干什么                    | 会喊什么                         | 自己存什么                   |
-| ------- | --------------------- | --------------------------- | -------------------------------- | ---------------------------- |
-| `qq`    | NoneBot `on_message`  | 发群消息、发私聊、群内 @ 人 | `message.received`               | `qq_events.json` 之类        |
-| `alarm` | 时间轮询、`on_tick()` | `set_alarm` 设闹钟          | `alarm_reminder`、`diary_prompt` | `alarms.json`、`config.json` |
-| `diary` | 被命令叫醒            | `write_diary` 写日记        | `diary.written`                  | `diaries.json`               |
-| `clock` | 时间轮询、`on_tick()` | 时间查询与显示              | `clock.tick`                     | 无                           |
-
-::: info
-内建应用还在持续迭代中，后续版本将逐步完善功能。本地控制台 (`localhost`) 提供额外的命令行交互能力。
-:::
 
 ## 下一步阅读
 
