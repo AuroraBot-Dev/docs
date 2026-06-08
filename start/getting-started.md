@@ -16,6 +16,10 @@ order: 2
 
 - `Python >=3.12, <3.13`
 
+::: info
+当前仅支持 Python 3.12 版本. 理论将支持 Python 3.12 以上所有版本.
+:::
+
 ## 克隆仓库
 
 ```bash
@@ -52,33 +56,48 @@ uv sync
 cp .env.example .env
 ```
 
-::: tip
-在 `.env` 中配置你的密钥:
+::: tip 配置模型和密钥
+在 `.env` 中配置你的模型和密钥. 其中快速模型是必须的, 其他模型可以根据需要配置.
 
 ```
-# 适配器配置
-ONEBOT_ACCESS_TOKEN=
-
-# 模型网关配置 (多角色)
+# 模型配置
 LLM_GATEWAY_FAST_MODEL=openai/gpt-4o-mini
 LLM_GATEWAY_QUALITY_MODEL=openai/gpt-4o
 LLM_GATEWAY_MULTIMODAL_MODEL=openai/gpt-4o
+LLM_GATEWAY_EMBEDDING_MODEL=openai/text-embedding-3-small
+LLM_GATEWAY_RERANKER_MODEL=
 
-# 记忆配置
-MEM0_VECTOR_STORE=chroma
-MEM0_COLLECTION_NAME=aurora_memory_bgem3
-
-MEM0_EMBEDDER_PROVIDER=openai
-MEM0_EMBEDDER_API_KEY=
-MEM0_EMBEDDER_BASE_URL=https://api.siliconflow.cn/v1/
-MEM0_EMBEDDER_MODEL=BAAI/bge-m3
-
-MEM0_LLM_PROVIDER=deepseek
-MEM0_LLM_API_KEY=
-MEM0_LLM_BASE_URL=https://api.deepseek.com
-MEM0_LLM_MODEL=deepseek-v4-flash
+# 密钥配置
+OPENAI_API_KEY=sk-your-key-here
 ```
 
+:::
+
+::: tip
+如果你使用的模型并非 OpenAI 模型, 那么请确保配置了正确的密钥. 比如一个可能的有效配置如下:
+
+```
+# 模型配置
+LLM_GATEWAY_FAST_MODEL=deepseek/deepseek-v4-flash
+LLM_GATEWAY_QUALITY_MODEL=deepseek/deepseek-v4-pro
+LLM_GATEWAY_MULTIMODAL_MODEL=xiaomi_mimo/mimo-v2.5-pro
+LLM_GATEWAY_EMBEDDING_MODEL=siliconflow/BAAI/bge-m3
+LLM_GATEWAY_RERANKER_MODEL=
+
+# 密钥配置
+DEEPSEEK_API_KEY=sk-xxx
+SILICONFLOW_API_KEY=sk-xxx
+XIAOMI_MIMO_API_KEY=sk-xxx
+OPENAI_API_KEY=
+```
+
+:::
+
+::: tip
+更多模型提供商/模型列表见 [Litellm](https://docs.litellm.ai/docs/providers)
+:::
+
+::: tip
 更多配置说明见 [配置说明](./configuration)
 :::
 
@@ -89,11 +108,11 @@ uv run bot.py
 ```
 
 ::: tip
-此时你的Bot将会以默认人格**小光**启动。启动后你会看到一个交互式控制台 (`localhost`)，可以直接在命令行中与她对话：
+此时你的Bot将会以默认人格**小光**启动。启动后你可以直接在命令行(localhost)中与她对话:
 
-- 直接输入文字即可向"小光"发送消息
-- 输入 `:help` 查看可用命令（`:say` 注入消息、`:invoke` 调用命令、`:emit` 注入事件、`:self` 查看自我之流等）
-- 输入 `:quit` 退出
+- 直接输入文字即可向小光发送消息
+- 输入 `/help` 查看可用命令
+- 输入 `/quit` 退出
 
 无需任何应用或适配器即可在控制台中体验完整的认知管线！
 :::

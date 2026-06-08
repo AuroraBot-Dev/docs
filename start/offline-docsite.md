@@ -9,7 +9,7 @@ order: 4
 在本地查看文档站.
 
 ::: info
-自从版本 `0.0.4` 开始, 文档站已从主仓库分离. 你可以在 [此处](https://github.com/AuroraBot-Dev/docs) 查看文档仓库.
+自从版本 `v0.0.4` 开始, 文档站已从主仓库分离. 你可以在 [此处](https://github.com/AuroraBot-Dev/docs) 查看文档仓库.
 :::
 
 ## 前期准备

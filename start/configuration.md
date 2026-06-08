@@ -30,59 +30,53 @@ AuroraBot 采用配置分离的策略：分为框架配置/环境变量、平台
 | --------------------- | --------------- | ------ |
 | `ONEBOT_ACCESS_TOKEN` | OneBot 访问令牌 | 字符串 |
 
-#### 模型网关配置
+::: info
+OneBot 令牌配置将在近期迁移至应用级配置。
+:::
+
+#### 模型配置
 
 基于 litellm 的多角色统一网关。模型标识格式为 `provider/model_name`：
 
-| 变量                          | 说明                   | 默认值                       |
-| ----------------------------- | ---------------------- | ---------------------------- |
-| `LLM_GATEWAY_FAST_MODEL`      | fast 角色模型 (轻量)   | `openai/gpt-4o-mini`         |
-| `LLM_GATEWAY_QUALITY_MODEL`   | quality 角色模型 (强)  | `openai/gpt-4o`              |
-| `LLM_GATEWAY_MULTIMODAL_MODEL`| multimodal 角色模型    | `openai/gpt-4o`              |
-| `LLM_GATEWAY_EMBEDDING_MODEL` | embedding 模型         | `openai/text-embedding-3-small` |
-| `LLM_GATEWAY_RERANKER_MODEL`  | reranker 模型 (可选)   | (空)                         |
+| 变量                           | 说明                  | 默认值                          |
+| ------------------------------ | --------------------- | ------------------------------- |
+| `LLM_GATEWAY_FAST_MODEL`       | fast 角色模型 (轻量)  | `openai/gpt-4o-mini`            |
+| `LLM_GATEWAY_QUALITY_MODEL`    | quality 角色模型 (强) | `openai/gpt-4o`                 |
+| `LLM_GATEWAY_MULTIMODAL_MODEL` | multimodal 角色模型   | `openai/gpt-4o`                 |
+| `LLM_GATEWAY_EMBEDDING_MODEL`  | embedding 模型        | `openai/text-embedding-3-small` |
+| `LLM_GATEWAY_RERANKER_MODEL`   | reranker 模型 (可选)  | (空)                            |
 
 #### 记忆配置
 
-通过 mem0 驱动，L3 语义记忆需配置 embedding 和 LLM 后端：
+通过 mem0 驱动：
 
-| 变量                     | 说明                       | 默认值                           |
-| ------------------------ | -------------------------- | -------------------------------- |
-| `MEM0_VECTOR_STORE`      | 向量存储引擎               | `chroma`                         |
-| `MEM0_COLLECTION_NAME`   | ChromaDB 集合名            | `aurora_memory_bgem3`            |
-| `MEM0_EMBEDDER_PROVIDER` | Embedding 服务提供方       | `openai`                         |
-| `MEM0_EMBEDDER_API_KEY`  | Embedding API 密钥（必填） | —                                |
-| `MEM0_EMBEDDER_BASE_URL` | Embedding API 地址         | `https://api.siliconflow.cn/v1/` |
-| `MEM0_EMBEDDER_MODEL`    | Embedding 模型             | `BAAI/bge-m3`                    |
-| `MEM0_LLM_PROVIDER`      | mem0 内置 LLM 提供方       | `deepseek`                       |
-| `MEM0_LLM_API_KEY`       | mem0 LLM API 密钥（必填）  | 同 LLM 网关密钥                  |
-| `MEM0_LLM_BASE_URL`      | mem0 LLM API 地址          | `https://api.deepseek.com`       |
-| `MEM0_LLM_MODEL`         | mem0 LLM 模型              | `deepseek-v4-flash`              |
-| `MEMORY_MODEL_PROVIDER`  | 记忆模型提供方             | `litellm`                        |
+::: info
+mem0 暂不支持更多配置。
+:::
 
 #### 运行配置
 
-| 变量                   | 说明         | 可选值                                                        |
-| ---------------------- | ------------ | ------------------------------------------------------------- |
-| `RUN_MODE`             | 启动模式     | `app` / `application` / `agent` / `core` / `dev` / `prod`    |
-| `HEARTBEAT_INTERVAL`   | 心跳间隔     | 浮点数（秒），默认 `1.0`                                      |
-| `APP_FRAME_INTERVAL`   | 应用帧间隔   | 浮点数（秒），默认 `1.0`                                      |
-| `EVENT_BRIDGE_INTERVAL`| 事件桥轮询间隔 | 浮点数（秒），默认 `1.5`                                    |
+| 变量                    | 说明           | 可选值                   |
+| ----------------------- | -------------- | ------------------------ |
+| `RUN_MODE`              | 启动模式       | `dev` / `prod`           |
+| `HEARTBEAT_INTERVAL`    | 心跳间隔       | 浮点数（秒），默认 `1.0` |
+| `APP_FRAME_INTERVAL`    | 应用帧间隔     | 浮点数（秒），默认 `1.0` |
+| `EVENT_BRIDGE_INTERVAL` | 事件桥轮询间隔 | 浮点数（秒），默认 `1.5` |
 
 #### 超时配置
 
-| 变量                      | 说明                 | 默认值 |
-| ------------------------- | -------------------- | ------ |
-| `LLM_GATE_TIMEOUT`        | LLM 网关超时 (秒)    | `30`   |
-| `MEMORY_RETRIEVE_TIMEOUT` | 记忆检索超时 (秒)    | `30`   |
+| 变量                      | 说明              | 默认值 |
+| ------------------------- | ----------------- | ------ |
+| `LLM_GATE_TIMEOUT`        | LLM 网关超时 (秒) | `30`   |
+| `MEMORY_RETRIEVE_TIMEOUT` | 记忆检索超时 (秒) | `30`   |
 
 #### 日志配置
 
-| 变量                                    | 说明               | 可选值           |
-| --------------------------------------- | ------------------ | ---------------- |
-| `LLM_GATEWAY_ENABLE_LOGGING_QUERIES`    | 记录 LLM 查询      | `true` / `false` |
-| `LLM_GATEWAY_ENABLE_LOGGING_RESPONSES`  | 记录 LLM 响应      | `true` / `false` |
-| `LOG_LEVEL`                             | 日志级别           | `DEBUG` / `INFO` / `WARNING` / `ERROR` |
+| 变量                                   | 说明          | 可选值                                 |
+| -------------------------------------- | ------------- | -------------------------------------- |
+| `LLM_GATEWAY_ENABLE_LOGGING_QUERIES`   | 记录 LLM 查询 | `true` / `false`                       |
+| `LLM_GATEWAY_ENABLE_LOGGING_RESPONSES` | 记录 LLM 响应 | `true` / `false`                       |
+| `LOG_LEVEL`                            | 日志级别      | `DEBUG` / `INFO` / `WARNING` / `ERROR` |
 
 ## 平台配置
 
@@ -103,14 +97,14 @@ apps:
 
 ## 应用配置
 
-通常位于 `./apps/<app>/config.example.json`.
+通常位于 `./data/app_data/<app>/config.json`.
 
 ::: warning
 一般情况下用户不应手动修改应用配置, 这应当由应用自动完成.
 :::
 
 ::: tip
-每个应用自带一份配置示例，描述自身需要的参数。运行时，应用应当从 `app_data` 中自动读取配置
+每个应用自带一份配置示例，描述自身需要的参数。运行时，应用应当自动读取配置, 或通过模型能力更新配置。
 :::
 
 ```json
