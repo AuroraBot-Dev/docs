@@ -52,7 +52,7 @@ apps/<your_app>/
 package: im.polaris.example
 name: 示例应用
 version: 1.0.0
-brain_version: ">=5.0.0"
+brain_version: ">=0.4.0"
 app_desc: >-
   描述这个应用适合在什么场景下被调用。
 commands:

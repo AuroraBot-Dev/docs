@@ -42,29 +42,29 @@ order: 2
 
 `EventBridge`（`src/brain/nodes/event_bridge.py`）将 `ApplicationHost` 队列中的 `AppEvent` 转化为文件写入，注入 `Circuit`。这是 App 层到认知层的正式接口。
 
-## 当前拓扑
+## 当前拓扑 (Kernel-γ)
 
 ```yaml
 # topology.yaml — 当前 enabled: true 的节点
 nodes:
-  - id: fanout # 扇出 inbox 事件
-  - id: reflex # 反射规则匹配（短路径）
-  - id: planner # LLM 生成计划
-  - id: expander # LLM 展开计划为命令
-  - id: executor # 执行命令 + LLM 判定
+  - id: message_preprocessor  # 事件收束 & 消息防抖
+  - id: internalizer          # B→A 转义者：事件→第一人称体验
+  - id: externalizer          # A→B 转义者：自我决定→JSON动作
+  - id: command_dispatcher    # JSON 解析 → 命令派发
+  - id: heartbeat             # 周期性心跳 (60s)
+  - id: timer_scheduler       # cron 规则 → 节律触发器
 ```
 
-## 文件生命周期
+## 文件生命周期 (Kernel-γ)
 
 ```
-inbox/pending/  →  FanOutRouter
-                  →  inbox/done/  →  PlanAgent  →  plans/pending/
-                  →  reflex/pending/  →  ReflexRouter  →  actions/pending/
-                  →  memory/pending/  →  MemoryRouter  →  三级记忆
-                                         plans/done/  ←  ExpandAgent  ←  plans/pending/
-                                      actions/pending/  ←  ExpandAgent
-                                      actions/done/  ←  ExecuteAgent  ←  actions/pending/
-                                      results/pending/  ←  ExecuteAgent
+inbox/pending/  →  MessagePreprocessor  →  pipeline/message_queue/
+                 →  Internalizer        →  pipeline/internalized/ + self/stream/now.md
+                 →  Externalizer        →  pipeline/action_queue/
+                 →  CommandDispatcher   →  App 命令执行
+
+heartbeat/tick.json  →  TimerScheduler  →  rhythm/triggers/
+                     →  MessagePreprocessor → (同上管线)
 ```
 
-每个处理节点处理完毕后将输入文件移入 `done/` 子目录，处理完成超阈值后移入 `archived/`。
+每个处理节点处理完毕后将输入文件移入 `done/` 子目录。

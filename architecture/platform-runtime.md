@@ -12,13 +12,20 @@ order: 2
 源码 API 文档正在施工中...
 :::
 
+::: info
+自版本 `v0.2.0` 起, 主仓库不再包含内建应用。安装应用文档正在施工中...
+:::
+
 ## 启动
+
+`start_runtime()` → `register_enabled_apps()` 负责平台侧初始化：
 
 1. `discover_apps()` 扫描 `apps/` 目录，识别同时包含 `manifest.yaml` 和 `__init__.py` 的合法应用
 2. 加载 `apps/config.yaml`，归一化配置，按 `enabled` 字段筛选要启动的应用
 3. `instantiate_app()` 动态导入模块并实例化 Application 对象，注入启动参数
 4. `app_host.register()` 加载 `manifest.yaml`，注册命令到命令表，通过 `_bind()` 注入 `PlatformAPI`，最后调用 `app.on_start()`
-5. 管理 app 从启动到停止的完整生命周期
+5. 注册内建命令 (`im.polaris.console.send_message`)
+6. `start_runtime_components()` 根据 `RUN_MODE` 按需启动 App 循环 / Circuit / EventBridge
 
 **图解**
 
@@ -60,7 +67,7 @@ while not stop_event.is_set():
 每帧调用 `host.tick()` → 各 App 的 `app.on_tick()` → App 通过 `PlatformAPI.emit_event()` 将 `AppEvent` 推入 `ApplicationHost._events` 双端队列。至此平台侧的事件生产完成，事件由 [内核运行时](./kernel-runtime.md) 的事件桥消费处理。
 
 ::: tip
-仅在 `RUN_MODE` 为 `app` / `application` / `prod` 时启动 `run_app_loop()`。若 `RUN_MODE` 包含 `agent` / `core`，则同时启动 `Circuit + EventBridge`，详见 [内核运行时](./kernel-runtime.md)。
+仅在 `RUN_MODE` 为 `app` / `application` / `dev` / `prod` 时启动 `run_app_loop()`。若 `RUN_MODE` 包含 `agent` / `core` / `dev` / `prod`，则同时启动 `Circuit + EventBridge + localhost 控制台`，详见 [内核运行时](./kernel-runtime.md)。
 :::
 
 **图解**
@@ -115,24 +122,11 @@ flowchart TB
 
 ## 关闭
 
-`shutdown_agent()` 中平台侧的收尾顺序:
+`shutdown_runtime()` 中平台侧的收尾顺序:
 
-1. `_stop_event.set()` — 通知 `run_app_loop()` 主循环停止
-2. 取消内核侧任务 (bridge / circuit, 详见 [内核运行时 - 关闭](./kernel-runtime.md#关闭))
-3. `_app_task.cancel()` — 取消 `run_app_loop()` 协程
-4. `app_host.stop_all()` — 遍历所有 App 调用 `app.on_stop()`，清空实例、命令表、事件队列
-
-## 内建应用概览
-
-| App     | 靠什么知道外面的事    | 能干什么                    | 会喊什么                         | 自己存什么                   |
-| ------- | --------------------- | --------------------------- | -------------------------------- | ---------------------------- |
-| `qq`    | NoneBot `on_message`  | 发群消息、发私聊、群内 @ 人 | `message.received`               | `qq_events.json` 之类        |
-| `alarm` | 时间轮询、`on_tick()` | `set_alarm` 设闹钟          | `alarm_reminder`、`diary_prompt` | `alarms.json`、`config.json` |
-| `diary` | 被命令叫醒            | `write_diary` 写日记        | `diary.written`                  | `diaries.json`               |
-
-::: info
-内建应用还在持续迭代中，后续版本将逐步完善功能。
-:::
+1. `state.stop_event.set()` — 通知所有协程停止
+2. `stop_runtime_components()` — 取消 bridge_task / circuit.stop() / app_task.cancel()
+3. `app_host.stop_all()` — 遍历所有 App 调用 `app.on_stop()`，清空实例、命令表、事件队列
 
 ## 下一步阅读
 

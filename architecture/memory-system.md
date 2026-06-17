@@ -6,7 +6,12 @@ order: 6
 
 # 记忆系统
 
-记忆系统是 CortexForge 认知引擎的 memory 子系统。`UnifiedMemoryManager` 封装了 L1/L2/L3 的写入与检索接口，认知节点通过它存取记忆。
+记忆系统是 CortexForge 认知引擎的 memory 子系统。当前版本同时运行两套记忆载体：
+
+- **三级联合记忆** (L1/L2/L3) — 传统的分层记忆，通过 `UnifiedMemoryManager` 统一存取
+- **自我之流** (SelfStream) — Kernel-γ 引入的第一人称叙事式记忆，`now.md` / `state.md` / `memories/` / `archive/`
+
+两套系统并行运行。长期方向是自我之流逐步成为主要记忆载体，三级记忆降级为检索加速层。详见 [Kernel-γ 路线图](../appendix/kernel-gamma-roadmap.html)。
 
 **挼挼如是说**
 
@@ -90,8 +95,40 @@ Agent 节点通过构造时注入的 `UnifiedMemoryManager` 实例调用这些�
 - L2 按时间线追加，带防抖去重: 连续相同内容不重复写入
 - L3 写入时通过 LLM 提取结构化事实，检索时按向量相似度 top-k 返回
 
+## 自我之流 (SelfStream) —— Kernel-γ 新增
+
+`src/brain/nodes/self_stream.py` 提供 Pool A 的第一人称叙事式记忆载体：
+
+```python
+stream = SelfStream()
+stream.append_experience("Alice 在群里说：'你好'。我感到一阵暖意。")
+recent = stream.read_recent(50)
+stream.update_state("- 精力：正常\\n- 情绪：愉快\\n")
+```
+
+### 与三级记忆的关系
+
+| 概念            | 三级记忆 (旧)        | 自我之流 (新)              |
+| --------------- | -------------------- | -------------------------- |
+| L1 工作记忆     | 内存 FIFO 列表       | `now.md` 最近内容          |
+| L2 情景记忆     | JSON 文件追加        | `archive/` 每日归档        |
+| L3 语义记忆     | ChromaDB 向量        | `memories/` + ChromaDB 索引 |
+
+### 核心操作
+
+| 方法                        | 用途                       |
+| --------------------------- | -------------------------- |
+| `append_experience(text)`   | 追加一段体验到 now.md      |
+| `read_recent(n_lines)`      | 读取最近 N 行              |
+| `read_recent_chars(n_chars)`| 读取最近 N 字符 (控制上下文窗口) |
+| `read_state()` / `update_state()` | 读写 self/state.md   |
+| `read_memory(name)` / `write_memory(name, content)` | 读写持久记忆 |
+| `archive_today()`           | 归档 now.md 到 archive/    |
+| `build_context()`           | 组装 Internalizer/Externalizer 标准上下文 |
+
 ## 下一步阅读
 
 - 想了解记忆在认知管线中的位置: 读 [认知引擎架构](./brain-architecture.html)
 - 想了解节点系统: 读 [节点系统](./node-system.html)
 - 想了解 Circuit 调度: 读 [内核运行时](./kernel-runtime.html)
+- 想了解 Kernel-γ 的完整设计: 读 [Kernel-γ 路线图](../appendix/kernel-gamma-roadmap.html)

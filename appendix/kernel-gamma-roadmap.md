@@ -6,9 +6,11 @@ order: 4
 
 # Kernel-γ 路线图：给"她"一个真正的我
 
-> **Kernel-α**：单体 PolarisAgent，验证「以文件为认知载体」的可行性。
-> **Kernel-β**（已完成）：拆分为 4 节点线性管线，证明多节点 DAG 设施可用。
+> **Kernel-α**：单体 PolarisAgent，验证「以文件为认知载体」的可行性。✅
+> **Kernel-β**（已完成）：拆分为 4 节点线性管线，证明多节点 DAG 设施可用。✅
 > **Kernel-γ**（本文档）：**不再将框架视为 Agent 工作流，而是为一个统一的认知主体搭建闭环的感知体系。**
+>
+> **当前状态 (v0.4.0-alpha.1)**：阶段 γ-1 (Pool A 基础设施) 和 γ-2 (Internalizer & Externalizer) 已完成并启用。MessagePreprocessor → Internalizer → Externalizer → CommandDispatcher 管线 + HeartbeatGenerator → TimerScheduler 节律环路已运行在生产电路中。阶段 γ-3 (Pool B 结构化 + 拓扑原语) 部分完成。阶段 γ-4 和 γ-5 尚未开始。
 
 ---
 
