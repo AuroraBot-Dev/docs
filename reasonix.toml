@@ -1,2 +1,0 @@
-[permissions]
-allow = ["Bash(cd \"E:\\AuroraBot-docs\"; git diff --no-color -- README.md | Select-Object -First 80)", "Bash(cd \"E:\\AuroraBot-docs\"; git diff --no-color -- index.md | Select-Object -First 80)", "Bash(cd \"E:\\AuroraBot-docs\"; git diff --no-color -- appendix/cortex-forge-whitebook.md | Select-Object -First 40)", "Bash(cd \"E:\\AuroraBot-docs\"; git diff --no-color -- architecture/brain-architecture.md | Select-Object -First 40)", "Bash(cd \"E:\\AuroraBot-docs\"; git diff --no-color -- architecture/system-overview.md | Select-Object -First 40)"]

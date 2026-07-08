@@ -16,5 +16,8 @@
   },
   "dependencies": {
     "vitepress-sidebar": "^1.33.2"
+  },
+  "allowScripts": {
+    "esbuild@0.21.5": true
   }
 }
