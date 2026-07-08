@@ -5,4 +5,4 @@ order: 5
 
 # 问答
 
-反馈回收、公告发布与常见问题回应。
+这里收敛部署、协议端、跨平台和多 IM 接入问题。架构问题优先阅读 [架构总览](../architecture/system-overview.html)。

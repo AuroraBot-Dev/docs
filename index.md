@@ -3,8 +3,8 @@ layout: home
 
 hero:
   name: AuroraBot
-  text: 新一代内驱式、自主决策的智能体框架
-  tagline: 声明式认知拓扑 · 三级联合记忆 · 统一 LLM 网关
+  text: 内驱式自主智能体框架
+  tagline: 统一事件认知 · MCP 原生应用层 · 文件驱动生命痕迹
   image:
     src: /logo.svg
     alt: AuroraBot Logo
@@ -16,26 +16,20 @@ hero:
       text: 架构总览
       link: /architecture/system-overview.html
     - theme: alt
-      text: 应用开发
+      text: App 开发
       link: /develop/app-development.html
 
 features:
-  - icon: 🌊
-    title: 双池认知架构 (Pool A / Pool B)
-    details: Pool A 维护第一人称"自我之流" (now.md)，Pool B 以 JSON 文件驱动无状态路由与派发。两池之间由 Internalizer 和 Externalizer 两个转义者桥接。
-  - icon: 🧠
-    title: 文件驱动认知管道
-    details: Node / Agent / Router 节点通过 FileEventBus 事件总线协作，topology.yaml 声明式配置邻接关系，文件落盘自动触发下游节点。
-  - icon: 📔
-    title: 三级联合记忆 + 自我之流
-    details: L1 工作记忆 / L2 情景记忆 / L3 语义记忆，通过 UnifiedMemoryManager 统一存取。自我之流 (SelfStream) 提供第一人称叙事式记忆载体。
-  - icon: 🤖
-    title: 多角色统一模型网关
-    details: 基于 litellm 的 ModelGateway，支持 fast / quality / multimodal / embedding 多角色，流式打断、费用追踪、异常分类。
-  - icon: ⏱️
-    title: 节律系统
-    details: HeartbeatGenerator + TimerScheduler 构成自主节律环路，她感知时间流逝——整点、早晨、深夜——如同另一种感官。
-  - icon: 🧩
-    title: App 插件体系
-    details: 每个 App 通过 manifest.yaml 声明能力，PlatformAPI 统一交互，按需启用。
+  - title: 统一事件认知
+    details: 用户消息、时间流逝、环境变化、工具结果都进入同一事件入口。AuroraBot 不区分“用户输入”和“环境输入”，只区分事件如何改变她的处境。
+  - title: 生命体视角
+    details: Bot 被设计为持续存在的主体，而不是一次性问答函数。节律、记忆、情绪状态和行动边界共同构成她的运行连续性。
+  - title: MCP 原生 App
+    details: App 是独立 MCP Server。Tools 承载可执行动作，Resources 承载只读上下文，notifications 承载外部事件。
+  - title: 平台层只做边界
+    details: Platform 管理 MCP Server 生命周期、连接、工具目录和事件桥接，不再承担应用业务逻辑或认知决策。
+  - title: Brain 重新设计中
+    details: Brain 保留最高哲学：统一事件、第一人称连续性、可追溯记忆。当前旧 Kernel 文档已降级为施工中资料。
+  - title: 可调试的状态流
+    details: 关键认知状态以文件、日志或结构化事件留下痕迹，方便复盘、回滚和审计。
 ---

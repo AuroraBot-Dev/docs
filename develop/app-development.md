@@ -1,225 +1,267 @@
 ---
 title: App 开发指南
-description: 从目录结构到生命周期，系统化说明 AuroraBot 的 App 开发方式。
+description: 基于 MCP Server 的 AuroraBot App 开发方式。
 order: 2
 ---
 
 # App 开发指南
 
-::: warning
-施工中... 指文本大致正确, 但是不完整或缺乏人工审核, 暂时仅供参考.
-:::
+App 是 AuroraBot 的感知与执行模块。重构完成后，一个 App 就是一个 MCP Server。
 
-App 是 AuroraBot 的感知与执行模块。一个 App 不负责推理——它只做两件事：把外部变化上报为事件，执行认知引擎决定的命令。
+App 不负责推理，不维护人格，不跨 App 编排。它只做三件事：
 
-**挼挼如是说**
+1. 把外部变化暴露为标准 MCP 信号；Aurora 原生 App 可以选择发送业务 notification。
+2. 通过 MCP Tools 暴露可执行动作。
+3. 通过 MCP Resources 暴露必要的只读状态。
 
-> 就是给 AuroraBot 写应用啦, 和你用的差不多, 就是没有 UI 而已~
+## 位置无关原则
 
-## 设计哲学
+AuroraBot 主仓库不规定 App 必须放在哪里，也不要求 App 使用主仓库的 Python 包结构。
 
-就像给自己写CLI工具一样, 原子化操作. 其他应用给你的反馈就是事件, 你点的按钮就是操作命令
+Platform 只需要知道两类信息：
 
-## 设计准则
+| 信息 | 作用 |
+| --- | --- |
+| MCP 连接信息 | 如何连接这个 Server，例如 `stdio` 命令、HTTP endpoint、环境变量 |
+| 外围元信息 | package、显示名、版本、描述、权限、风险等级、默认启用状态 |
 
-1. App 负责感知与执行，不负责复杂决策
-2. App 应暴露原子命令，避免在 App 内部编排复杂业务流程
-3. App 的私有数据由 App 自己管理，内核不访问 App 私有数据
+因此 App 可以位于：
 
-## 标准目录结构
+- 主仓库 `apps/` 目录内，适合内置样例或开发联调。
+- 独立 Git 仓库，适合第三方 App。
+- 用户本机任意目录，通过 `stdio.command` 启动。
+- 远程服务，通过 Streamable HTTP endpoint 连接。
+- 受限情况下的 in-process adapter，但对 Brain/Platform 暴露的仍应是 MCP 语义。
+
+主仓库只通过统一协议和外围信息与 App 通信，不 import App 的业务模块，不约束 App 的内部目录。
+
+## 本地样例结构
 
 ```text
-apps/<your_app>/
+apps/aurora-app-example/
   __init__.py
   manifest.yaml
-  runtime.py
-  README.md
+  mcp_server.py
+  service.py
   config.example.json
+  README.md
 ```
 
-## 核心文件说明
+上面只是推荐的本地开发样例，不是协议要求。独立仓库或远程 Server 可以使用任何内部结构，只要能提供 MCP Server 入口。
 
-### `manifest.yaml` — 能力声明
+| 文件 | 职责 |
+| --- | --- |
+| `manifest.yaml` | 本地样例的外围元信息；远程 App 可由 registry 或 `apps/config.yml` 提供等价信息 |
+| `mcp_server.py` | MCP Server 入口，注册 tools/resources/notifications |
+| `service.py` | 纯业务逻辑，不 import Platform 或 Brain |
+| `config.example.json` | App 私有配置示例 |
+| `README.md` | 能力边界、配置说明、风险说明 |
 
-声明以下信息：
+## 外围元信息
 
-- 包名与版本
-- 可调用的命令及其参数与返回值
-
-示例：
+本地 App 可以用 `manifest.yaml` 声明外围元信息：
 
 ```yaml
 package: im.polaris.example
 name: 示例应用
 version: 1.0.0
 brain_version: ">=0.4.0"
+type: mcp-server
 app_desc: >-
-  描述这个应用适合在什么场景下被调用。
-commands:
+  描述这个 App 提供什么外部感知或执行能力。
+
+mcp:
+  transport: stdio
+  entry: mcp_server.py
+  command: ["uv", "run", "python", "-m", "apps.aurora-app-example.mcp_server"]
+
+tools:
   - name: do_something
-    description: 执行一个示例动作
-    parameters:
-      text:
-        type: string
-        description: 要处理的文本
-        required: true
-    returns:
-      success:
-        type: boolean
-        description: 是否成功
+    description: 执行一个原子动作
 ```
 
-### `runtime.py` — 实现逻辑
+`tools` 字段只用于人类阅读和静态检查；真实工具目录来自 MCP `tools/list`。
 
-App 的实际运行逻辑。框架会在注册时注入 `PlatformAPI` 实例，然后按生命周期调度。
+远程 App 或第三方 App 不一定要把 manifest 放进主仓库。只要 `apps/config.yml`、App registry 或其他发现机制能向 Platform 提供等价元信息即可。
 
-示例：
+## 连接配置
+
+`apps/config.yml` 是主仓库连接 App 的入口，而不是 App 位置规范。
+
+本地 stdio App：
+
+```yaml
+apps:
+  example-local:
+    enabled: true
+    package: im.polaris.example
+    mcp:
+      transport: stdio
+      command:
+        - uv
+        - run
+        - --project
+        - D:/third-party/aurora-example-app
+        - python
+        - -m
+        - aurora_example.mcp_server
+      env: {}
+```
+
+远程 HTTP App：
+
+```yaml
+apps:
+  example-remote:
+    enabled: true
+    package: im.polaris.example
+    mcp:
+      transport: streamable-http
+      endpoint: https://example.com/mcp
+      headers:
+        Authorization: Bearer ${EXAMPLE_APP_TOKEN}
+```
+
+Platform 通过这些连接信息建立 MCP session，再用 `tools/list`、`resources/list` 和 notifications 了解 App 能力。
+
+## service.py
+
+业务逻辑必须能脱离 MCP 独立测试。
 
 ```python
-from pathlib import Path
-from typing import TYPE_CHECKING
-
-if TYPE_CHECKING:
-    from src.platform.application_api import PlatformAPI
+from __future__ import annotations
 
 
-class ExampleApplication:
-    def __init__(self) -> None:
-        self._api: PlatformAPI | None = None
-
-    def _bind(self, api: "PlatformAPI") -> None:
-        self._api = api
-
-    def manifest_path(self) -> Path:
-        return Path(__file__).with_name("manifest.yaml")
-
-    async def on_start(self) -> None:
-        pass
-
-    async def on_tick(self) -> None:
-        pass
-
-    async def on_stop(self) -> None:
-        pass
-
-    def do_something(self, text: str) -> dict:
-        return {"success": True}
+class ExampleService:
+    async def do_something(self, text: str) -> dict[str, object]:
+        return {
+            "ok": True,
+            "text": text,
+        }
 ```
 
-## PlatformAPI 提供的常用能力
+规则：
 
-`_bind(self, api)` 被调用后，即可通过 `api` 访问以下能力：
+- 不 import `src.platform`。
+- 不 import `src.brain`。
+- 不直接读写 Brain 的 `data/kernel/` 或 `data/memory/`。
+- App 私有状态放在自己的数据目录或外部服务中。
+- 异常返回结构化错误，不让 MCP Server 进程退出。
 
-### `api.emit_event(event)`
+## mcp_server.py
 
-将外部变化上报为 `AppEvent`。
+推荐使用官方 Python SDK 的 FastMCP。
 
 ```python
-api.emit_event(
-    AppEvent(
-        source=api.package,
-        type="message.received",
-        session_id="12345",
-        summary="收到一条消息",
-        payload={"text": "你好"},
-    )
-)
+from __future__ import annotations
+
+from mcp.server.fastmcp import FastMCP
+
+from .service import ExampleService
+
+mcp = FastMCP("aurora-example", json_response=True)
+service = ExampleService()
+
+
+@mcp.tool(name="do_something")
+async def do_something(text: str) -> dict[str, object]:
+    """执行一个原子动作。"""
+    return await service.do_something(text=text)
+
+
+@mcp.resource("example://status")
+async def status() -> str:
+    return "ok"
+
+
+if __name__ == "__main__":
+    mcp.run(transport="stdio")
 ```
 
-### `api.data_dir`
+stdio 约束：
 
-每个 App 的独立数据目录，适合存放：
+- stdout 只能输出 MCP 消息。
+- 日志写 stderr 或项目日志文件。
+- tool 返回值必须 JSON 可序列化。
 
-- 配置文件
-- 缓存
-- 临时状态
-- 运行日志或快照
+## 事件上报
 
-### `api.log(level, message)`
+第三方 MCP Server 不需要实现 AMP。只要它是标准 MCP Server，Platform 就能通过 tools/resources/prompts/notifications/lifecycle/error 等信号把它纳入 AuroraBot 的统一事件认知。
 
-通过统一日志器记录运行信息。
+如果 App 是 Aurora 原生事件源，推荐发送 `aurora/event` notification，让 Platform 更精确地理解业务语义。这个 notification 的 payload 可以只包含业务字段，Platform 会补齐 AMP header。
 
-### `api.package`
+事件类型建议使用点分隔：
 
-`manifest.yaml` 中声明的包名。
+- `message.received`
+- `alarm.triggered`
+- `timer.triggered`
+- `weather.reported`
+- `diary.written`
+- `lifecycle.started`
+- `lifecycle.crashed`
 
-## 生命周期
+事件 payload 应该包含足够上下文，但不要塞入 App 的全部私有状态。
 
-App 的完整生命周期：
+```json
+{
+  "method": "aurora/event",
+  "params": {
+    "type": "message.received",
+    "session_id": "group_123456",
+    "summary": "收到一条消息",
+    "data": {
+      "text": "你好"
+    }
+  }
+}
+```
 
-1. 平台发现并实例化 App
-2. 调用 `_bind(api)` 注入 `PlatformAPI`
-3. 调用 `on_start()` 执行初始化
-4. 循环调用 `on_tick()`（频率由 `APP_FRAME_INTERVAL` 控制）
-5. 退出时调用 `on_stop()` 执行清理
+对普通 MCP Server：
 
-### `on_start()` — 初始化
+- `notifications/tools/list_changed` 会被 Platform 转成 `capability.changed`。
+- tool 调用成功或失败会被 Platform 转成 `tool.completed` / `tool.failed`。
+- 自定义 notification 会被 Platform 按 method 和 params 映射为 `mcp.notification.*`，也可以通过 adapter 配置映射为业务事件。
 
-适合做的：
+## 工具设计准则
 
-- 读本地配置
-- 初始化连接
-- 注册回调
-- 恢复上次的运行状态
+好的 Tool 应满足：
 
-### `on_tick()` — 定时帧
+- 原子：一次调用只做一件明确的事。
+- 可审计：参数和返回值能解释发生了什么。
+- 可组合：复杂行为留给 Brain 编排。
+- 可失败：失败时返回结构化错误，而不是假装成功。
+- 有边界：不要暴露读取全盘文件、执行任意命令等危险能力。
 
-适合做的：
+## App 不该做什么
 
-- 检查时间条件
-- 处理队列中的任务
-- 派发到期任务
+- 不要判断“该不该回复用户”。
+- 不要在 App 内写复杂对话策略。
+- 不要读取 Brain 的人格提示词或记忆数据库。
+- 不要把 MCP Tool 描述写成诱导模型越权的提示词。
+- 不要用 notification 表达有副作用的命令；有副作用必须走 Tool。
 
-不应做的：
+## 开发流程
 
-- 长时间阻塞——会拖慢整个 tick 循环
-- 重型同步 I/O
-
-### `on_stop()` — 清理
-
-适合做的：
-
-- 将内存中的状态持久化到磁盘
-- 关闭连接
-- 释放资源
-
-## 开发建议
-
-### App 负责执行，认知引擎负责决策
-
-不应在 App 中编写"看到关键词 A 就自动走流程 B"这类硬编码决策逻辑。应将外部变化上报为事件，由认知引擎的节点决定后续动作。
-
-### 命令粒度保持原子化
-
-好的命令应满足：
-
-- 功能明确——单一职责
-- 参数清晰——输入输出规格完整
-- 可组合——多个原子命令可串联完成复杂任务
-- 可测试——输入输出规整，便于单元测试
-
-### 保证容错但不降级处理
-
-- 在 `on_tick()`、文件读取、外部通信等易出错的环节，要尽量考虑异常情况，避免直接崩溃。
-- 当发生异常时, 尽量上报为事件, 由认知引擎的节点处理, 不擅自降级处理。
-
-## 推荐的开发流程
-
-1. 先设计 `manifest.yaml` — 声明 API
-2. 再实现 `runtime.py` — 编写运行逻辑
-3. 用 `config.example.json` 说明配置格式
-4. 补个 `README.md` 说明边界与限制
-5. 通过 `app.py`（或未来的 `aur`）做独立调试
+1. 写 `service.py`，先让业务逻辑可单测。
+2. 写 `mcp_server.py`，暴露最小 tools。
+3. 准备外围元信息：本地样例可写 `manifest.yaml`，第三方/远程 App 可由 registry 或连接配置提供。
+4. 在 `apps/config.yml` 添加连接配置，而不是把代码搬进主仓库。
+5. 用 MCP Inspector 或测试 Client 验证 `tools/list` 和 `tools/call`。
+6. 再接入 AuroraBot Platform。
 
 ## 自检清单
 
-- 是否声明了清晰的 `package`
-- 是否为每个命令写了准确描述
-- 是否避免了在 App 中承担复杂决策
-- 是否把私有状态都放在 `api.data_dir`
-- 是否处理了配置缺失与文件损坏等异常
+- package 是否全局唯一。
+- App 是否能在主仓库外独立运行。
+- tools 是否都有清晰描述和类型标注。
+- stdout 是否没有普通日志。
+- App 是否没有 import Brain。
+- Tool 是否返回结构化成功/失败结果。
+- 如果需要主动上报业务事件，notification payload 是否有稳定 schema，Platform 是否能映射为 AMP。
+- 私有数据是否没有越过 Platform 直接进入 Brain。
 
 ## 继续阅读
 
-- 想理解平台如何调度 App：读 [平台运行时](../architecture/platform-runtime.html)
-- 想理解命令怎么最终被执行：读 [认知架构](../architecture/brain-architecture.html)
+- 平台如何连接 App：[平台运行时](../architecture/platform-runtime.html)
+- MCP 协议背景：[MCP 模型上下文协议](../appendix/mcp-model-context-protocol.html)
+- Brain 设计边界：[Brain 架构重设计](../architecture/brain-redesign.html)

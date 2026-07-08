@@ -1,12 +1,12 @@
 ---
 title: 配置说明
-description: AuroraBot 的环境变量、平台配置、应用级配置与人格文档配置说明。
+description: AuroraBot 的环境变量、MCP App 配置、应用私有配置与人格文档配置说明。
 order: 3
 ---
 
 # 配置说明
 
-AuroraBot 采用配置分离的策略：分为框架配置/环境变量、平台配置、应用级配置和人格文档配置四类。
+AuroraBot 采用配置分离策略：框架环境变量、MCP App 编排配置、App 私有配置和人格文档分开维护。
 
 ::: warning
 配置体系仍在早期阶段，部分配置项尚未稳定。当前文档反映的是现阶段可用能力，后续会随框架演进而更新。
@@ -78,26 +78,43 @@ mem0 暂不支持更多配置。
 | `LLM_GATEWAY_ENABLE_LOGGING_RESPONSES` | 记录 LLM 响应 | `true` / `false`                       |
 | `LOG_LEVEL`                            | 日志级别      | `DEBUG` / `INFO` / `WARNING` / `ERROR` |
 
-## 平台配置
+## MCP App 编排配置
 
-通常位于 `./apps/config.yaml`.
+通常位于 `./apps/config.yml`。
 
 ::: tip
-你可以自由地决定哪些 App 被启用以及其启动参数
+这里决定哪些 App 启用、如何启动 MCP Server，以及传递哪些业务启动参数。
 :::
 
 ```yaml
 apps:
-  example:
+  aurora-app-example:
     enabled: true
     startup:
-      greeting: hello from example
-      emit_startup_event: true
+      greeting: hello
+    mcp:
+      enabled: true
+      transport: stdio
+      command: ["uv", "run", "python", "-m", "apps.aurora-app-example.mcp_server"]
+      env: {}
+      health_timeout_seconds: 10.0
 ```
+
+字段说明：
+
+| 字段 | 说明 |
+| --- | --- |
+| `enabled` | 是否参与本次启动 |
+| `startup` | App 业务启动参数，由 App 自己解释 |
+| `mcp.enabled` | 是否走 MCP 主路径 |
+| `mcp.transport` | 传输方式，第一阶段以 `stdio` 为主 |
+| `mcp.command` | 启动 MCP Server 的命令 |
+| `mcp.env` | 传给 App 进程的额外环境变量 |
+| `mcp.health_timeout_seconds` | 健康检查超时 |
 
 ## 应用配置
 
-通常位于 `./data/app_data/<app>/config.json`.
+通常位于 `./data/app_data/<app>/config.json`。
 
 ::: warning
 一般情况下用户不应手动修改应用配置, 这应当由应用自动完成.

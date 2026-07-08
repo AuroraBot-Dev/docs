@@ -33,7 +33,7 @@ npm install
 如果你的网络环境不好导致 `npm` 下载缓慢, 你可以尝试使用以下命令来加速下载:
 
 ```bash
-npm install -i https://registry.tuna.tsinghua.edu.cn/simple
+npm install --registry=https://registry.npmmirror.com
 ```
 
 :::

@@ -101,10 +101,10 @@ OPENAI_API_KEY=
 更多配置说明见 [配置说明](./configuration)
 :::
 
-## 启动Bot
+## 启动 Bot
 
 ```bash
-uv run bot.py
+uv run python bot.py
 ```
 
 ::: tip
@@ -122,5 +122,5 @@ uv run bot.py
 :::
 
 ::: info
-框架第一适配 NapCat 适配器。其他适配器将在后续测试后逐渐开放。
+App/Platform 层正在转向 MCP 主路径。QQ 接入仍依赖 OneBot/NapCat，但新 App 开发应优先参考 [App 开发指南](../develop/app-development.html)。
 :::

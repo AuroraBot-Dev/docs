@@ -23,7 +23,7 @@
 13. [AuroraBot 的 MCP 化边界](#13-aurorabot-的-mcp-化边界)
 14. [AuroraBot 目标架构](#14-aurorabot-目标架构)
 15. [AuroraBot App MCP Server 设计规范](#15-aurorabot-app-mcp-server-设计规范)
-16. [AMP：基于 MCP notification 的 Aurora 消息协议](#16-amp基于-mcp-notification-的-aurora-消息协议)
+16. [AMP：Platform 侧 MCP 兼容 envelope](#16-ampplatform-侧-mcp-兼容-envelope)
 17. [迁移建议](#17-迁移建议)
 18. [实现检查清单](#18-实现检查清单)
 19. [参考资料](#19-参考资料)
@@ -44,7 +44,7 @@ MCP（Model Context Protocol，模型上下文协议）是一个用于连接 LLM
 
 - 用 `tools/list` 和 `tools/call` 替代自定义 `CommandSpec` 注册与派发。
 - 用标准 JSON Schema 描述工具入参和结构化出参。
-- 用 notification 承载 App 到 Brain 的事件上报。
+- 用标准 MCP 能力接入外部生态，由 Platform 把 notifications、lifecycle、tool result、resource observation 等信号归一化为 Brain 事件。
 - 让 App 从同进程插件变成可独立运行、可独立重启、可独立测试的服务进程。
 - 消除 “LLM 输出文本 JSON -> 解析 -> 派发命令” 的脆弱链路。
 
@@ -971,7 +971,7 @@ MCP
 - `src/platform/` 中 App 注册、命令派发、事件桥接相关职责。
 - `apps/aurora-app-*` 的外部能力。
 - `CommandSpec` 到 MCP Tool 的转换。
-- App 到 Brain 的事件上报，基于 MCP notification + AMP envelope。
+- App/Server 到 Brain 的事件入口由 Platform 归一化生成 AMP envelope；第三方 MCP Server 不需要实现 AMP。
 - App 生命周期管理，改为独立 Server 进程管理。
 
 ### 13.2 不应该 MCP 化
@@ -1010,8 +1010,8 @@ MCP
 │  │ Platform MCP Kit                                     │   │
 │  │ - MCPServerKit: spawn / stop / restart / health      │   │
 │  │ - MCPClientManager: initialize / list / call          │   │
-│  │ - EventBridge: notification -> inbox file             │   │
-│  │ - AMP validator                                      │   │
+│  │ - AMPCompatibilityBridge: MCP signals -> inbox file   │   │
+│  │ - AMP normalizer / validator                         │   │
 │  └───────┬───────────────┬───────────────┬──────────────┘   │
 └──────────┼───────────────┼───────────────┼──────────────────┘
            │ stdio          │ stdio          │ stdio
@@ -1200,7 +1200,7 @@ im.polaris.qq.send_message
 
 ### 15.6 stdout / stderr 约束
 
-所有 MCP Server 必须遵守：
+所有使用 stdio transport 的 MCP Server 必须遵守：
 
 - stdout 只写 MCP JSON-RPC 消息。
 - 日志写 stderr。
@@ -1210,21 +1210,32 @@ im.polaris.qq.send_message
 
 这条约束应加入 App 开发规范和测试。
 
-## 16. AMP：基于 MCP notification 的 Aurora 消息协议
+## 16. AMP：Platform 侧 MCP 兼容 envelope
 
-MCP notification 只规定消息是单向的，不规定业务 payload。AuroraBot 需要在 notification 上定义类型化 envelope，称为 AMP（Aurora Message Protocol）。
+AMP（Aurora Message Protocol）不是要求所有 MCP Server 实现的私有协议。它是 AuroraBot Platform 内部的统一事件 envelope，用来把 MCP 生态中的多种标准信号归一化成 Brain 可消费的文件事件。
 
-### 16.1 方法命名
+这一定义保证 AuroraBot 可以直接接入现有 MCP 生态：
 
-```text
-aurora/event          # App -> Brain，应用事件
-aurora/event/ack      # Brain -> App，事件确认
-aurora/log            # App -> Brain，应用日志流
-aurora/health         # App -> Brain，健康状态
-aurora/lifecycle      # App -> Brain，生命周期事件
-```
+- 第三方 MCP Server 只需要遵守 MCP 标准，不需要知道 AMP。
+- Platform 从 `tools/list`、`tools/call`、resources、prompts、notifications、lifecycle、transport error 等信号生成 AMP。
+- Aurora 原生 App 可以选择发送 `aurora/event` notification，作为业务事件快捷路径。
+- Brain 只消费 AMP 文件事件，不直接感知底层 Server 是第三方 MCP 还是 Aurora 原生 App。
 
-命令调用不建议使用 `aurora/command/invoke`，应优先走标准 `tools/call`。
+### 16.1 MCP 信号映射
+
+| 来源信号 | AMP payload.type 示例 | 说明 |
+| --- | --- | --- |
+| initialize 成功 | `lifecycle.started` | Server 接入成功 |
+| transport 断开 / 进程退出 | `lifecycle.stopped` / `lifecycle.crashed` | 连接状态变化 |
+| `notifications/tools/list_changed` | `capability.changed` | 工具目录变化 |
+| `notifications/resources/list_changed` | `capability.changed` | 资源目录变化 |
+| `notifications/prompts/list_changed` | `capability.changed` | Prompt 目录变化 |
+| `tools/call` result | `tool.completed` / `tool.failed` | 工具调用审计 |
+| `resources/read` result | `resource.observed` | 资源快照，按需进入 Brain |
+| 任意第三方 notification | `mcp.notification.<method>` | 保守映射；可由 adapter 覆盖 |
+| 可选 `aurora/event` | App 声明的业务类型 | Aurora 原生 App 快捷路径 |
+
+命令调用不使用 notification 表达，应优先走标准 `tools/call`。
 
 ### 16.2 Envelope
 
@@ -1232,7 +1243,7 @@ aurora/lifecycle      # App -> Brain，生命周期事件
 {
   "header": {
     "protocol": "amp/1.0",
-    "method": "aurora/event",
+    "method": "mcp.notification",
     "message_id": "018f2f4c-7b2a-7b8a-9c31-2e9a0b9b2d11",
     "timestamp": "2026-06-17T14:30:00+08:00",
     "source": {
@@ -1260,10 +1271,10 @@ aurora/lifecycle      # App -> Brain，生命周期事件
 | 字段 | 必填 | 说明 |
 |------|------|------|
 | `header.protocol` | 是 | 固定 `amp/1.0` |
-| `header.method` | 是 | MCP notification method |
+| `header.method` | 是 | 原始信号类别，如 `mcp.notification`、`mcp.tool_result`、`mcp.lifecycle`、`aurora/event` |
 | `header.message_id` | 是 | 全局唯一，用于去重和追溯 |
 | `header.timestamp` | 是 | ISO 8601，必须带时区 |
-| `header.source.app` | 是 | App package |
+| `header.source.app` | 是 | MCP Server package 或连接名 |
 | `header.source.instance` | 否 | 多实例标识 |
 | `payload.type` | 是 | 点分事件类型 |
 | `payload.session_id` | 否 | 会话标识 |
@@ -1287,21 +1298,26 @@ diary.queried
 lifecycle.started
 lifecycle.stopping
 lifecycle.crashed
+capability.changed
+tool.completed
+tool.failed
+resource.observed
+mcp.error
 ```
 
 ### 16.4 EventBridge 行为
 
-EventBridge 接收 `aurora/event` notification 后，不直接调用 Brain 内部对象，而是写入 FileEventBus inbox：
+AMP Compatibility Bridge 接收 Platform 可观测到的 MCP 信号后，不直接调用 Brain 内部对象，而是写入 FileEventBus inbox：
 
 ```text
-aurora/event notification
-  -> AMP validate
+MCP signals
+  -> AMP normalize / validate
   -> deduplicate by message_id
   -> write data/kernel/inbox/pending/event_{type}_{message_id}.json
   -> existing FileEventBus pipeline continues
 ```
 
-这样可以保持 Brain 的文件驱动特性，同时用 MCP 替代旧 `ApplicationHost.drain_events()`。
+这样可以保持 Brain 的文件驱动特性，同时用 MCP 替代旧 `ApplicationHost.drain_events()`。没有 `aurora/event` 的第三方 MCP Server 仍然可以作为 App 被接入；它只是没有主动业务事件快捷通道。
 
 ## 17. 迁移建议
 
@@ -1311,8 +1327,8 @@ aurora/event notification
 - 新增 `src/platform/mcp_kit/`。
 - 实现 `MCPServerKit`：启动、停止、重启、健康检查、stderr 日志采集。
 - 实现 `MCPClientManager`：初始化、能力协商、`tools/list` 缓存、`tools/call`、notification 分发。
-- 实现 AMP envelope dataclass / validator。
-- 增加最小集成测试：启动一个 fake MCP Server，完成 initialize/list/call/notification。
+- 实现 AMP envelope dataclass、normalizer 和 validator。
+- 增加最小集成测试：启动一个不含 AMP 逻辑的 fake MCP Server，完成 initialize/list/call，并验证 Platform 能生成 lifecycle/tool result 类 AMP 事件。
 
 ### Phase 2：App 双入口
 
@@ -1327,7 +1343,7 @@ aurora/event notification
 - Externalizer 改为使用 LLM 原生 tool calls。
 - `MCPClientManager` 把 MCP Tool 转换为 LiteLLM/OpenAI tool schema。
 - tool call 经过策略检查后执行 `tools/call`。
-- EventBridge 改为接收 AMP notification。
+- EventBridge 改为接收 Platform 侧 AMP queue。
 - `command_dispatcher` 逐步下线。
 
 ### Phase 4：清理
@@ -1376,7 +1392,7 @@ aurora/event notification
 - [ ] 业务错误使用 `isError: true`。
 - [ ] 不在 tool description 中写策略绕过提示。
 - [ ] 不把 secret 打进日志。
-- [ ] notification 使用 AMP envelope。
+- [ ] 如果 Server 主动上报业务事件，notification payload 有稳定 schema，Platform 能映射为 AMP。
 
 ### 18.4 安全策略
 

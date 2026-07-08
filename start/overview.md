@@ -1,86 +1,81 @@
 ---
 title: 项目总览
-description: 快速了解 AuroraBot 的定位、结构、运行方式与当前边界。
+description: AuroraBot 的定位、边界和目标架构。
 order: 1
 ---
 
 # 项目总览
 
-AuroraBot 是一个基于 NoneBot2 的智能体框架。框架分为三个部分:
+AuroraBot 是一个面向“持续存在的智能体”的框架。它不把 Bot 视为聊天 API 的薄包装，而是把 Bot 视为一个会接收事件、形成体验、沉淀记忆、选择行动的生命体。
 
-- **应用** (`apps`) 负责感知外部输入、暴露可调用的命令
-- **平台** (`platform`) 负责管理 App 的注册、生命周期、事件与命令
-- **认知** (`brain`) 负责组织包括事件桥、节点、记忆系统等有关认知的组件
+当前文档按重构完成后的目标态编写：App/Platform 层原生兼容 MCP；Brain 层正在重新设计，旧 Kernel-γ 细节不再作为目标架构承诺。
 
-**挼挼如是说**
+## 三层边界
 
-> 在 AuroraBot 之前, 挼挼其实已经写了一个叫 Bot-Polaris 的项目。由于其过于逆天的耦合程度, 导致其虽然效果不错, 但是维护成本极高。最终挼挼决定转向 AuroraBot 的开发, 致力于构建一个兼容现有生态的创新智能体框架。
+| 层 | 职责 | 不负责 |
+| --- | --- | --- |
+| App | 连接外部世界，提供 MCP Tools/Resources/notifications | 推理、人格、跨 App 编排 |
+| Platform | 管理 MCP Server、工具目录、事件桥和安全边界 | 业务决策、认知状态 |
+| Brain | 把所有事件统一纳入第一人称认知流，决定是否行动 | 直接维护具体平台协议 |
 
-::: tip
-**CortexForge** 为认知引擎的内部代号。当前认知内核为 **Kernel-γ**, 记忆系统为 **Memory-α**。
-:::
+## 核心哲学
 
-::: info
-后期可能将应用完全 skill 化, 以拓宽生态。
-:::
+AuroraBot 的设计最高哲学是统一事件认知：
 
-## 运行时
+- 用户消息、闹钟、天气变化、工具结果、系统节律都是事件。
+- 事件不按“用户/环境”分层，而按“它如何影响我”进入认知。
+- App 只负责把世界翻译成事件，把行动翻译成外部效果。
+- Brain 负责形成体验、保持连续性、选择行动。
+- 记忆不是聊天记录缓存，而是生命痕迹的沉淀与再组织。
+
+## 目标运行时
 
 ```mermaid
 flowchart LR
-    subgraph APPS["应用们"]
-        QQ["QQ"]
-        DIARY["Diary"]
+    subgraph WORLD["外部世界"]
+        QQ["QQ / IM"]
+        CLOCK["时间"]
+        API["外部 API"]
+        FILES["App 私有数据"]
     end
 
-    subgraph RUN["应用宿主"]
-        direction LR
-        HOST["App 生命周期"]
+    subgraph APPS["MCP App Servers"]
+        QQAPP["QQ App"]
+        CLOCKAPP["Clock App"]
+        WEATHER["Weather App"]
+        DIARY["Diary App"]
     end
 
-    subgraph NODES["认知引擎"]
-        direction LR
-        A["认知电路"]
-        B["记忆系统"]
+    subgraph PLATFORM["Platform"]
+        KIT["MCP Server Kit"]
+        CLIENT["MCP Client Manager"]
+        BRIDGE["AMP Compatibility Bridge"]
     end
 
-    APPS <--> HOST
-    HOST <--"事件桥"--> A
-    A <--> B
+    subgraph BRAIN["Brain"]
+        EVENT["统一事件入口"]
+        SELF["第一人称认知流"]
+        MEMORY["记忆系统"]
+        ACTION["行动选择"]
+    end
+
+    WORLD <--> APPS
+    APPS <--> CLIENT
+    KIT --> CLIENT
+    CLIENT --> BRIDGE --> EVENT
+    EVENT --> SELF <--> MEMORY
+    SELF --> ACTION --> CLIENT
 ```
 
-## 认知内核
+## 当前文档状态
 
-::: tip Kernel-α
-Kernel-α 内核主要用于最小化验证, 使用最基础的超级单Agent模式. 可以通过仅启用 `PolarisAgent` 来启用。
-:::
-
-::: tip Kernel-β
-Kernel-β 内核节点 (ImpulseGate / ActionPlanner / PolarisAgent 等) 实现了线性多Agent模式, 但是属于单流水线模式。
-:::
-
-::: tip Kernel-γ (当前版本)
-Kernel-γ 内核逐渐形成认知网图, 实现非线性的认知和记忆。并即将支持社区认知插件。(如 多模态认知节点, 梦境等)
-:::
-
-## 适合的场景
-
-- 养赛博妹妹
-- 养赛博女鹅
-- 个人助手 (类似 [AstrBot](https://astrbot.app/) , [OpenClaw](https://openclaws.io/zh/))
-
-::: tip
-当前版本仅支持 QQ 接入，后续版本将支持更多平台。
-:::
-
-::: info
-个人助手的支持不是第一目标, 可能会长期搁置。
-
-挼挼认为个人助手的重要基础设施是安全操作系统的能力。但是当前版本的安全性不足以支持Agent安全无害且可信任的操作系统。故个人助手的支持将被搁置。
-:::
+- 平台与 App 文档：按 MCP 重构完成后的目标状态维护。
+- Brain 文档：只保留边界和设计草案。旧节点、旧管线、旧双池实现不再作为稳定说明。
+- 附录：保留协议背景和历史材料；过时内容会标记为历史资料。
 
 ## 下一步
 
-- 想了解代码结构：[架构总览](../architecture/system-overview.html)
-- 想跑起来：[快速开始](./getting-started.html)
-- 想写 App：[App 开发指南](../develop/app-development.html)
+- 想运行项目：读 [快速开始](./getting-started.html)
+- 想理解目标架构：读 [架构总览](../architecture/system-overview.html)
+- 想写 App：读 [App 开发指南](../develop/app-development.html)
+- 想看 Brain 新设计：读 [Brain 架构重设计](../architecture/brain-redesign.html)

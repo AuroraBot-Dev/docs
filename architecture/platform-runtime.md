@@ -1,135 +1,166 @@
 ---
 title: 平台运行时
-description: 理解 ApplicationHost、PlatformAPI 与 App 之间的运行时关系，以及 Platform 与 Kernel、Brain 的边界。
+description: MCP 原生 Platform 的职责、启动顺序和事件/工具通道。
 order: 2
 ---
 
 # 平台运行时
 
-本文描述平台部分的结构和启动后的运作方式
+Platform 是 AuroraBot 的协议边界层。重构完成后，旧 `ApplicationHost`、`PlatformAPI`、进程内 `on_tick()` App 循环不再是主路径。
 
-::: warning
-源码 API 文档正在施工中...
-:::
+Platform 的关键意义是位置解耦：主仓库不需要规定 MCP Server 或 App 的代码位置。只要能通过 MCP 连接，并提供必要的外围元信息，App 可以在主仓库内、独立仓库、本机任意目录或远程服务中运行。
 
-::: info
-自版本 `v0.2.0` 起, 主仓库不再包含内建应用。安装应用文档正在施工中...
-:::
+## 核心职责
 
-## 启动
+| 组件 | 职责 |
+| --- | --- |
+| `MCPServerKit` | 根据连接配置启动、停止、重启本地 App MCP Server |
+| `MCPClientManager` | 为每个 Server 建立 MCP session，维护工具目录并执行工具调用 |
+| `AMP Compatibility Bridge` | 把标准 MCP 信号和可选 `aurora/event` 归一化为 Brain 统一事件 |
+| `Tool Schema Adapter` | 把 MCP Tool schema 转成 LLM 可用的工具描述 |
 
-`start_runtime()` → `register_enabled_apps()` 负责平台侧初始化：
+Platform 只处理连接、协议、权限和生命周期，不处理认知决策。
 
-1. `discover_apps()` 扫描 `apps/` 目录，识别同时包含 `manifest.yaml` 和 `__init__.py` 的合法应用
-2. 加载 `apps/config.yaml`，归一化配置，按 `enabled` 字段筛选要启动的应用
-3. `instantiate_app()` 动态导入模块并实例化 Application 对象，注入启动参数
-4. `app_host.register()` 加载 `manifest.yaml`，注册命令到命令表，通过 `_bind()` 注入 `PlatformAPI`，最后调用 `app.on_start()`
-5. 注册内建命令 (`im.polaris.console.send_message`)
-6. `start_runtime_components()` 根据 `RUN_MODE` 按需启动 App 循环 / Circuit / EventBridge
-
-**图解**
+## 启动顺序
 
 ```mermaid
 flowchart TB
-    subgraph ROW1["启动与发现"]
-        direction LR
-        START["NoneBot Startup"]
-        DISCOVER["discover_apps()<br/>扫描 apps/"]
-        LOADCFG["load_apps_config()<br/>归一化配置"]
-    end
+    START["NoneBot startup"]
+    CFG["读取 apps/config.yml"]
+    DISC["读取外围元信息"]
+    SPEC["合成 MCPServerSpec"]
+    SPAWN["MCPServerKit.start_all()"]
+    CONNECT["MCPClientManager.connect_all()"]
+    TOOLS["tools/list + 冲突检测"]
+    BRIDGE["启动 AMP 兼容归一化桥"]
+    BRAIN["启动 Brain runtime"]
 
-    subgraph ROW2["注册与绑定"]
-        direction LR
-        INST["instantiate_app()<br/>动态导入实例化"]
-        REGISTER["app_host.register()"]
-        MANIFEST["加载 manifest.yaml<br/>注册命令"]
-        BIND["_bind(PlatformAPI)"]
-        ONSTART["app.on_start()"]
-    end
-
-    START --> DISCOVER --> LOADCFG
-    LOADCFG --> INST --> REGISTER
-    REGISTER --> MANIFEST --> BIND
-    BIND --> ONSTART
+    START --> CFG --> DISC --> SPEC --> SPAWN --> CONNECT --> TOOLS --> BRIDGE --> BRAIN
 ```
 
-## 运行时
+启动阶段必须失败得足够早：
 
-`app.on_start()` 完成后，`run_app_loop()` 进入主循环，按固定帧间隔驱动所有 App:
+- App 配置声明启用本地 MCP，但启动命令不可用：启动失败。
+- 两个 Server 暴露同名工具且无法加 package 前缀区分：启动失败。
+- MCP 协议初始化失败：该 App 标记为不可用，并在健康状态中暴露原因。
 
-```python
-# src/platform/loop.py
-while not stop_event.is_set():
-    await host.tick()       # 遍历所有 App → app.on_tick()
-    await asyncio.sleep(interval)
+## App 连接配置
+
+`apps/config.yml` 是 Platform 的 App 编排入口，不是 App 目录规范。
+
+```yaml
+apps:
+  aurora-app-weather:
+    enabled: true
+    startup:
+      default_city: 北京
+      language: zh
+    mcp:
+      enabled: true
+      transport: stdio
+      command: ["uv", "run", "python", "-m", "apps.aurora-app-weather.mcp_server"]
+      env: {}
+      health_timeout_seconds: 10.0
 ```
 
-每帧调用 `host.tick()` → 各 App 的 `app.on_tick()` → App 通过 `PlatformAPI.emit_event()` 将 `AppEvent` 推入 `ApplicationHost._events` 双端队列。至此平台侧的事件生产完成，事件由 [内核运行时](./kernel-runtime.md) 的事件桥消费处理。
+约定：
 
-::: tip
-仅在 `RUN_MODE` 为 `app` / `application` / `dev` / `prod` 时启动 `run_app_loop()`。若 `RUN_MODE` 包含 `agent` / `core` / `dev` / `prod`，则同时启动 `Circuit + EventBridge + localhost 控制台`，详见 [内核运行时](./kernel-runtime.md)。
-:::
+- `enabled` 控制 App 是否参与本次启动。
+- `startup` 是业务启动参数，由 App 自己解释。
+- `mcp.enabled` 控制是否走 MCP 主路径。
+- 第一期默认 `stdio`；远程或多实例部署再启用 Streamable HTTP。
 
-**图解**
+对于主仓库外的 App，`command` 可以指向任意本地路径；对于远程 App，可改用 Streamable HTTP endpoint。Platform 只关心连接成功后的 MCP capability 与工具目录。
+
+## 工具调用通道
+
+MCP Tool 是 AuroraBot 的唯一 App 动作通道。
 
 ```mermaid
-flowchart TB
-    subgraph ROW1["启动运行"]
-        direction LR
-        ONSTART["app.on_start() 完成"]
-        LOOP["run_app_loop()<br/>应用主循环 (可选)"]
-    end
+flowchart LR
+    BRAIN["Brain 行动选择"]
+    SCHEMA["工具目录"]
+    CLIENT["MCPClientManager.call_tool()"]
+    SERVER["App MCP Server"]
+    WORLD["外部世界"]
 
-    subgraph ROW2["每帧调度"]
-        direction LR
-        TICK["host.tick()"]
-        APPTICK["app.on_tick()"]
-        EMIT["emit_event()"]
-        QUEUE["Event Queue<br/>(ApplicationHost._events)"]
-    end
-
-    ONSTART --> LOOP
-    LOOP --> TICK --> APPTICK --> EMIT --> QUEUE
+    SCHEMA --> BRAIN
+    BRAIN --> CLIENT --> SERVER --> WORLD
 ```
 
-## 核心对象
+工具命名规则：
 
-### `ApplicationHost` 应用宿主
+- 对 Brain 暴露的工具名使用 package 前缀，例如 `im.polaris.weather.get_weather`。
+- App 内部可以把 MCP tool 命名为 `get_weather`，由 Platform 统一补全前缀。
+- 同名冲突不能静默覆盖。
 
-`ApplicationHost` 是 app 们的房东，目前身兼数职：
+## 事件通道
 
-- 管着所有 app 实例
-- 管着命令注册表
-- 管着事件队列
+AMP 不是第三方 App 必须实现的私有协议。Platform 会把 MCP session 中可观测到的标准信号统一包装成 AMP envelope，再写入 Brain。
 
-已经提供的接口：
+会进入 AMP 的来源包括：
 
-- `register()` — 注册 app 实例
-- `tick()` — 驱动所有 app 执行一个周期
-- `stop_all()` — 停止全部应用
-- `drain_events()` — 取出积压事件
-- `invoke_command()` — 调用指定 app 的命令
+- MCP lifecycle：连接成功、断开、初始化失败。
+- MCP capability notification：`notifications/tools/list_changed`、`notifications/resources/list_changed`、`notifications/prompts/list_changed`。
+- Tool 调用结果：成功、失败、超时。
+- Resource 读取结果：按配置进入统一事件。
+- 任意第三方 notification：按 method 和 params 保守映射。
+- Aurora 原生 App 的可选 `aurora/event` notification。
 
-### `PlatformAPI` — 管子
+Aurora 原生 App 可以直接发送业务事件，Platform 负责补齐或校验 envelope：
 
-这是平台塞给每个 app 的万能插座。app 通过它跟外界打交道：
+```json
+{
+	"header": {
+		"protocol": "amp/1.0",
+    "method": "aurora/event",
+    "message_id": "uuid",
+    "timestamp": "2026-06-19T12:00:00+08:00",
+    "source": {
+      "app": "im.polaris.qq",
+      "instance": "default"
+    }
+  },
+  "payload": {
+    "type": "message.received",
+    "session_id": "group_123456",
+    "summary": "收到一条群消息",
+    "data": {
+      "text": "你好"
+    },
+    "expire_at": null
+  }
+}
+```
 
-- `emit_event()` — 喊一嗓子："出事了！"
-- `register_command()` — "我会干这个"
-- `data_dir` — 我的小仓库
-- `package` — 我是谁
-- `log()` — 记个日志
+事件桥只做转换：
 
-## 关闭
+```text
+MCP signals -> AMP normalize/validate -> inbox/pending/event_<type>_<id>.json
+```
 
-`shutdown_runtime()` 中平台侧的收尾顺序:
+事件桥不做回复判断，不调用 LLM，不修改 App 私有状态。
 
-1. `state.stop_event.set()` — 通知所有协程停止
-2. `stop_runtime_components()` — 取消 bridge_task / circuit.stop() / app_task.cancel()
-3. `app_host.stop_all()` — 遍历所有 App 调用 `app.on_stop()`，清空实例、命令表、事件队列
+## 关闭顺序
 
-## 下一步阅读
+1. 停止接收新的外部事件。
+2. 等待正在执行的 tool call 完成或超时取消。
+3. 关闭 MCP Client sessions。
+4. 停止 App MCP Server 进程。
+5. 停止 Brain runtime。
 
-- 想了解认知引擎如何处理事件: 读 [内核运行时](./kernel-runtime.html)
-- 想了解认知引擎总体结构: 读 [认知引擎架构](./brain-architecture.html)
-- 想写自己的应用: 读 [App 开发指南](../develop/app-development.html)
+异常关闭时必须保留日志和健康状态，便于判断是 App 崩溃、协议失败还是 Brain 消费失败。
+
+## 与旧平台层的关系
+
+以下概念是历史实现，不再作为目标架构：
+
+- `ApplicationHost`
+- `PlatformAPI`
+- `ApplicationProtocol`
+- `run_app_loop()`
+- `on_tick()`
+- `CommandSpec`
+- `AppEvent` 队列
+
+迁移期可以保留兼容层，但文档和新开发都应以 MCP 主路径为准。
