@@ -1,166 +1,190 @@
----
-title: 平台运行时
-description: MCP 原生 Platform 的职责、启动顺序和事件/工具通道。
-order: 2
----
+# MCP Platform
 
-# 平台运行时
+Platform 把外部生态归一化为 AMP，并执行已获权的环境效果。nightly 的平台注册表只有 MCP；Console 与 Panel 不属于 Platform。
 
-Platform 是 AuroraBot 的协议边界层。重构完成后，旧 `ApplicationHost`、`PlatformAPI`、进程内 `on_tick()` App 循环不再是主路径。
+## 支持范围
 
-Platform 的关键意义是位置解耦：主仓库不需要规定 MCP Server 或 App 的代码位置。只要能通过 MCP 连接，并提供必要的外围元信息，App 可以在主仓库内、独立仓库、本机任意目录或远程服务中运行。
-
-## 核心职责
-
-| 组件 | 职责 |
+| 能力 | Nightly |
 | --- | --- |
-| `MCPServerKit` | 根据连接配置启动、停止、重启本地 App MCP Server |
-| `MCPClientManager` | 为每个 Server 建立 MCP session，维护工具目录并执行工具调用 |
-| `AMP Compatibility Bridge` | 把标准 MCP 信号和可选 `aurora/event` 归一化为 Brain 统一事件 |
-| `Tool Schema Adapter` | 把 MCP Tool schema 转成 LLM 可用的工具描述 |
+| 本地 MCP | stdio 子进程 |
+| 远程 MCP | HTTPS Streamable HTTP |
+| Server 能力 | 动态 `tools/list` 与 `tools/call` |
+| 环境事件 | MCP notification → AMP |
+| Resources / Prompts | 未接入运行时目录 |
+| 断线自动重连 | 文档正在编写；当前连接丢失会停止组合根 |
 
-Platform 只处理连接、协议、权限和生命周期，不处理认知决策。
-
-## 启动顺序
-
-```mermaid
-flowchart TB
-    START["NoneBot startup"]
-    CFG["读取 apps/config.yml"]
-    DISC["读取外围元信息"]
-    SPEC["合成 MCPServerSpec"]
-    SPAWN["MCPServerKit.start_all()"]
-    CONNECT["MCPClientManager.connect_all()"]
-    TOOLS["tools/list + 冲突检测"]
-    BRIDGE["启动 AMP 兼容归一化桥"]
-    BRAIN["启动 Brain runtime"]
-
-    START --> CFG --> DISC --> SPEC --> SPAWN --> CONNECT --> TOOLS --> BRIDGE --> BRAIN
-```
-
-启动阶段必须失败得足够早：
-
-- App 配置声明启用本地 MCP，但启动命令不可用：启动失败。
-- 两个 Server 暴露同名工具且无法加 package 前缀区分：启动失败。
-- MCP 协议初始化失败：该 App 标记为不可用，并在健康状态中暴露原因。
-
-## App 连接配置
-
-`apps/config.yml` 是 Platform 的 App 编排入口，不是 App 目录规范。
-
-```yaml
-apps:
-  aurora-app-weather:
-    enabled: true
-    startup:
-      default_city: 北京
-      language: zh
-    mcp:
-      enabled: true
-      transport: stdio
-      command: ["uv", "run", "python", "-m", "apps.aurora-app-weather.mcp_server"]
-      env: {}
-      health_timeout_seconds: 10.0
-```
-
-约定：
-
-- `enabled` 控制 App 是否参与本次启动。
-- `startup` 是业务启动参数，由 App 自己解释。
-- `mcp.enabled` 控制是否走 MCP 主路径。
-- 第一期默认 `stdio`；远程或多实例部署再启用 Streamable HTTP。
-
-对于主仓库外的 App，`command` 可以指向任意本地路径；对于远程 App，可改用 Streamable HTTP endpoint。Platform 只关心连接成功后的 MCP capability 与工具目录。
-
-## 工具调用通道
-
-MCP Tool 是 AuroraBot 的唯一 App 动作通道。
+## 启动流程
 
 ```mermaid
-flowchart LR
-    BRAIN["Brain 行动选择"]
-    SCHEMA["工具目录"]
-    CLIENT["MCPClientManager.call_tool()"]
-    SERVER["App MCP Server"]
-    WORLD["外部世界"]
+sequenceDiagram
+    participant A as aurora 组合根
+    participant P as MCPPlatform
+    participant S as stdio / HTTP Servers
+    participant E as AgentEngine
 
-    SCHEMA --> BRAIN
-    BRAIN --> CLIENT --> SERVER --> WORLD
+    A->>P: create(config, ingress)
+    P->>S: 启动 stdio / 连接 HTTPS
+    P->>S: initialize + tools/list
+    S-->>P: Tool schemas
+    P->>P: 构建 capability catalog
+    P->>S: 若 Clock 存在，调用 start_heartbeat
+    P-->>A: PlatformHandle + ToolExecutor bindings
+    A->>E: bind_tool_executors
 ```
 
-工具命名规则：
+任一 App 初始化失败会使 MCP Platform 启动失败，组合根随后回收已经建立的连接和子进程。
 
-- 对 Brain 暴露的工具名使用 package 前缀，例如 `im.polaris.weather.get_weather`。
-- App 内部可以把 MCP tool 命名为 `get_weather`，由 Platform 统一补全前缀。
-- 同名冲突不能静默覆盖。
+## App 配置
 
-## 事件通道
+### stdio
 
-AMP 不是第三方 App 必须实现的私有协议。Platform 会把 MCP session 中可观测到的标准信号统一包装成 AMP envelope，再写入 Brain。
+```toml
+[[app]]
+package = "org.aurora.clock"
+enabled = true
+transport = "stdio"
+working_dir = "src/apps/aurora-app-clock"
+command = ["uv", "run", "--no-sync", "python", "mcp_server.py"]
+env = []
+timeout_seconds = 30
+```
 
-会进入 AMP 的来源包括：
+子进程只继承启动所需的有限基础环境、受控临时目录、`AURORA_APP_DATA_DIR` 和 `env` 显式列出的变量。stdout 必须只承载 MCP JSON-RPC；诊断写 stderr。
 
-- MCP lifecycle：连接成功、断开、初始化失败。
-- MCP capability notification：`notifications/tools/list_changed`、`notifications/resources/list_changed`、`notifications/prompts/list_changed`。
-- Tool 调用结果：成功、失败、超时。
-- Resource 读取结果：按配置进入统一事件。
-- 任意第三方 notification：按 method 和 params 保守映射。
-- Aurora 原生 App 的可选 `aurora/event` notification。
+### Streamable HTTP
 
-Aurora 原生 App 可以直接发送业务事件，Platform 负责补齐或校验 envelope：
+```toml
+[[app]]
+package = "com.example.remote"
+enabled = true
+transport = "streamable_http"
+url = "https://mcp.example.com/mcp"
+auth_env = "REMOTE_MCP_TOKEN"
+env = []
+timeout_seconds = 30
+```
+
+远程 URL 必须是 HTTPS。可选 `auth_env` 以 Bearer token 注入认证。HTTP 连接不能声明本地命令或工作目录。
+
+## 工具目录
+
+MCP raw tool name 与配置 package 组合为稳定能力 ID：
+
+```text
+raw tool:      set_timer
+app package:   org.aurora.clock
+capability:    aur.mcp.org.aurora.clock.set_timer
+```
+
+发现要求：
+
+- Tool name 非空；
+- `inputSchema` 是 JSON 对象；
+- 组合后的 capability ID 全局唯一；
+- description 与 schema 原样进入能力目录；
+- Agent profile 再按精确 ID、前缀通配和排除规则过滤。
+
+App 不需要在 AuroraBot 里另写 tool allowlist 或适配器类。
+
+## 工具执行
+
+```mermaid
+sequenceDiagram
+    participant M as Agent Model
+    participant E as Engine
+    participant P as MCPPlatform
+    participant S as MCP Server
+
+    M->>E: Tool call
+    E->>E: 授权 + schema + 预算
+    E->>P: 持久化 ToolExecutionRequest
+    P->>S: tools/call
+    S-->>P: MCP result
+    P->>P: 规范化结果
+    P->>E: tool.succeeded / failed / unknown AMP
+    E->>M: continuation + 真实 Tool result
+```
+
+成功结果只保留一种规范表示：
+
+1. MCP `structuredContent`；
+2. 可解析为 JSON 的文本；
+3. 纯文本。
+
+明确的 Server 错误成为 `tool.failed`。连接中断等无法确认真实效果是否发生的异常成为 `tool.unknown`，避免错误地重试不可撤回操作。
+
+## 通知与 AMP
+
+### Aurora 事件通知
+
+App 通过 MCP logging notification 发送：
 
 ```json
 {
-	"header": {
-		"protocol": "amp/1.0",
-    "method": "aurora/event",
-    "message_id": "uuid",
-    "timestamp": "2026-06-19T12:00:00+08:00",
-    "source": {
-      "app": "im.polaris.qq",
-      "instance": "default"
-    }
-  },
-  "payload": {
-    "type": "message.received",
-    "session_id": "group_123456",
-    "summary": "收到一条群消息",
-    "data": {
-      "text": "你好"
-    },
-    "expire_at": null
+  "logger": "aurora/event",
+  "data": {
+    "type": "weather.changed",
+    "session_id": "weather:shanghai",
+    "summary": "上海开始下雨",
+    "data": {"level": "moderate"},
+    "idempotency_key": "provider-event-123"
   }
 }
 ```
 
-事件桥只做转换：
+Platform 使用 package、事件类型、session 与幂等键确定性生成 AMP `message_id`。
 
-```text
-MCP signals -> AMP normalize/validate -> inbox/pending/event_<type>_<id>.json
+### 通用通知
+
+其他合法 MCP notification 会包装为：
+
+```json
+{
+  "type": "mcp.notification",
+  "session_id": "com.example.app",
+  "summary": "notifications/resources/updated",
+  "data": {
+    "method": "notifications/resources/updated",
+    "params": {}
+  }
+}
 ```
 
-事件桥不做回复判断，不调用 LLM，不修改 App 私有状态。
+保留的 `tool.*` 类型会被拒绝，防止 App 伪造工具回执。stdio 通知队列上限是 256；消费者处理前不会无界增长。
 
-## 关闭顺序
+## Clock App
 
-1. 停止接收新的外部事件。
-2. 等待正在执行的 tool call 完成或超时取消。
-3. 关闭 MCP Client sessions。
-4. 停止 App MCP Server 进程。
-5. 停止 Brain runtime。
+内建 Clock 提供：
 
-异常关闭时必须保留日志和健康状态，便于判断是 App 崩溃、协议失败还是 Brain 消费失败。
+- 当前时间；
+- 闹钟和定时器；
+- 闹钟列表与取消；
+- 持久化 heartbeat；
+- 由 Agent 调整下一次 heartbeat 的 sleep。
 
-## 与旧平台层的关系
+数据位于 `data/platform/mcp/apps/org.aurora.clock/tasks.json`。Platform 发现其 `start_heartbeat` 后自动调用，心跳触发 `system.tick` AMP。
 
-以下概念是历史实现，不再作为目标架构：
+## 生命周期
 
-- `ApplicationHost`
-- `PlatformAPI`
-- `ApplicationProtocol`
-- `run_app_loop()`
-- `on_tick()`
-- `CommandSpec`
-- `AppEvent` 队列
+组合根拥有 PlatformHandle：
 
-迁移期可以保留兼容层，但文档和新开发都应以 MCP 主路径为准。
+- `bindings`：工具执行目录；
+- `background`：连接监视；
+- `cleanup`：有界关闭回调；
+- `server`：若平台自身提供长驻服务。
+
+stdio 子进程逆序关闭；HTTP session、后台通知任务与本地 client 统一回收。任一已建立连接意外结束会传播错误并请求整个 AuroraBot 进程停止。
+
+## 当前缺口
+
+::: warning 文档正在编写中
+以下边界尚未完全闭环：
+
+- App 工作目录、命令、URL 和必需环境变量的统一启动前诊断；
+- MCP 断线自动重连与跨重连 Tool 幂等；
+- 核心 TOML 级供应商瞬时事件过滤；
+- Resources、Prompts、健康检查、版本兼容与第三方脚手架；
+- 真实 stdio/HTTP 长期集成和故障注入覆盖。
+
+当前 App 应在自身边界过滤无持续语义的供应商瞬时事件，并用稳定幂等键上报其余事实。
+:::

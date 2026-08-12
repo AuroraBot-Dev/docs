@@ -1,7 +1,7 @@
 {
   "name": "aurorabot-docs",
   "private": true,
-  "version": "0.4.0",
+  "version": "0.5.0",
   "description": "AuroraBot 文档站",
   "scripts": {
     "dev": "vitepress dev . --host 0.0.0.0 --port 5173",
@@ -13,9 +13,6 @@
     "mermaid": "^11.14.0",
     "vitepress": "^1.6.4",
     "vitepress-plugin-mermaid": "^2.0.17"
-  },
-  "dependencies": {
-    "vitepress-sidebar": "^1.33.2"
   },
   "allowScripts": {
     "esbuild@0.21.5": true

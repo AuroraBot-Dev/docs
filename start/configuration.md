@@ -1,188 +1,337 @@
----
-title: 配置说明
-description: AuroraBot 的环境变量、MCP App 配置、应用私有配置与人格文档配置说明。
-order: 3
----
+# 配置
 
-# 配置说明
+AuroraBot 在启动时读取一次结构配置，校验后生成不可变 `AuroraConfig` 快照。修改配置需要重启。
 
-AuroraBot 采用配置分离策略：框架环境变量、MCP App 编排配置、App 私有配置和人格文档分开维护。
+## 配置原则
 
-::: warning
-配置体系仍在早期阶段，部分配置项尚未稳定。当前文档反映的是现阶段可用能力，后续会随框架演进而更新。
-:::
+- 结构、启用状态和路径只写 TOML；
+- 密钥只来自 TOML 明确点名的环境变量；
+- `.env` 只是本地注入密钥的便捷文件，不会被应用自动加载；
+- 未知键、缺失键、越界路径、重复 ID 和无效交叉引用会在启动时失败；
+- profile 只能覆盖 `runtime.toml`，不能改模型、Agent、App 或存储结构。
 
-## 环境变量
+## 文件一览
 
-通常位于 `./.env`.
-
-#### 环境配置
-
-| 变量                 | 说明                 | 可选值           |
-| -------------------- | -------------------- | ---------------- |
-| `ENVIRONMENT`        | 运行环境             | `dev` / `prod`   |
-| `DRIVER`             | 驱动协议             | `~fastapi` 等    |
-| `LOCALSTORE_USE_CWD` | 本地存储使用当前目录 | `true` / `false` |
-
-#### 适配器配置
-
-| 变量                  | 说明            | 可选值 |
-| --------------------- | --------------- | ------ |
-| `ONEBOT_ACCESS_TOKEN` | OneBot 访问令牌 | 字符串 |
-
-::: info
-OneBot 令牌配置将在近期迁移至应用级配置。
-:::
-
-#### 模型配置
-
-基于 litellm 的多角色统一网关。模型标识格式为 `provider/model_name`：
-
-| 变量                           | 说明                  | 默认值                          |
-| ------------------------------ | --------------------- | ------------------------------- |
-| `LLM_GATEWAY_FAST_MODEL`       | fast 角色模型 (轻量)  | `openai/gpt-4o-mini`            |
-| `LLM_GATEWAY_QUALITY_MODEL`    | quality 角色模型 (强) | `openai/gpt-4o`                 |
-| `LLM_GATEWAY_MULTIMODAL_MODEL` | multimodal 角色模型   | `openai/gpt-4o`                 |
-| `LLM_GATEWAY_EMBEDDING_MODEL`  | embedding 模型        | `openai/text-embedding-3-small` |
-| `LLM_GATEWAY_RERANKER_MODEL`   | reranker 模型 (可选)  | (空)                            |
-
-#### 记忆配置
-
-通过 mem0 驱动：
-
-::: info
-mem0 暂不支持更多配置。
-:::
-
-#### 运行配置
-
-| 变量                    | 说明           | 可选值                   |
-| ----------------------- | -------------- | ------------------------ |
-| `RUN_MODE`              | 启动模式       | `dev` / `prod`           |
-| `HEARTBEAT_INTERVAL`    | 心跳间隔       | 浮点数（秒），默认 `1.0` |
-| `APP_FRAME_INTERVAL`    | 应用帧间隔     | 浮点数（秒），默认 `1.0` |
-| `EVENT_BRIDGE_INTERVAL` | 事件桥轮询间隔 | 浮点数（秒），默认 `1.5` |
-
-#### 超时配置
-
-| 变量                      | 说明              | 默认值 |
-| ------------------------- | ----------------- | ------ |
-| `LLM_GATE_TIMEOUT`        | LLM 网关超时 (秒) | `30`   |
-| `MEMORY_RETRIEVE_TIMEOUT` | 记忆检索超时 (秒) | `30`   |
-
-#### 日志配置
-
-| 变量                                   | 说明          | 可选值                                 |
-| -------------------------------------- | ------------- | -------------------------------------- |
-| `LLM_GATEWAY_ENABLE_LOGGING_QUERIES`   | 记录 LLM 查询 | `true` / `false`                       |
-| `LLM_GATEWAY_ENABLE_LOGGING_RESPONSES` | 记录 LLM 响应 | `true` / `false`                       |
-| `LOG_LEVEL`                            | 日志级别      | `DEBUG` / `INFO` / `WARNING` / `ERROR` |
-
-## MCP App 编排配置
-
-通常位于 `./apps/config.yml`。
-
-::: tip
-这里决定哪些 App 启用、如何启动 MCP Server，以及传递哪些业务启动参数。
-:::
-
-```yaml
-apps:
-  aurora-app-example:
-    enabled: true
-    startup:
-      greeting: hello
-    mcp:
-      enabled: true
-      transport: stdio
-      command: ["uv", "run", "python", "-m", "apps.aurora-app-example.mcp_server"]
-      env: {}
-      health_timeout_seconds: 10.0
-```
-
-字段说明：
-
-| 字段 | 说明 |
+| 文件 | 职责 |
 | --- | --- |
-| `enabled` | 是否参与本次启动 |
-| `startup` | App 业务启动参数，由 App 自己解释 |
-| `mcp.enabled` | 是否走 MCP 主路径 |
-| `mcp.transport` | 传输方式，第一阶段以 `stdio` 为主 |
-| `mcp.command` | 启动 MCP Server 的命令 |
-| `mcp.env` | 传给 App 进程的额外环境变量 |
-| `mcp.health_timeout_seconds` | 健康检查超时 |
+| `config/runtime.toml` | profile、Panel 后端、本地 Console |
+| `config/profiles/*.toml` | 仅覆盖 runtime 段 |
+| `config/engine.toml` | 并发、Triage、自主节律、Task 预算 |
+| `config/models.toml` | Provider 与模型角色绑定 |
+| `config/platforms.toml` | 默认平台组合 |
+| `config/agents.toml` | Agent profile、能力与委派边界 |
+| `config/apps.toml` | MCP App 连接和启动描述 |
+| `config/prompts.toml` | SOUL、WORLD 与 profile 提示词映射 |
+| `config/logging.toml` | 日志级别与目录 |
+| `config/storage.toml` | 各包私有数据目录 |
 
-## 应用配置
+## Profile 选择顺序
 
-通常位于 `./data/app_data/<app>/config.json`。
+优先级从高到低：
 
-::: warning
-一般情况下用户不应手动修改应用配置, 这应当由应用自动完成.
-:::
+1. CLI 全局参数 `aurora --profile NAME ...`；
+2. 环境变量 `AURORA_PROFILE`；
+3. `runtime.toml` 的 `runtime.profile`。
 
-::: tip
-每个应用自带一份配置示例，描述自身需要的参数。运行时，应用应当自动读取配置, 或通过模型能力更新配置。
-:::
+被选中的 `config/profiles/NAME.toml` 必须存在，且其中 `runtime.profile` 必须与名称一致。
 
-```json
-{
-  "greeting": "hello from example",
-  "emit_startup_event": true
-}
+## Runtime、Console 与 Panel
+
+```toml
+[runtime]
+profile = "prod"
+
+[runtime.panel]
+enabled = true
+host = "127.0.0.1"
+port = 8765
+allowed_origins = [
+    "http://localhost:8766",
+    "http://127.0.0.1:8766",
+]
+open_browser = false
+session_ttl_seconds = 604800
+max_upload_bytes = 67108864
+
+[runtime.console]
+enabled = true
+terminal_logs = false
 ```
 
-## 人格文档
+约束：
 
-通常位于 `./src/brain/prompts/`.
+- Panel 只能绑定 loopback；它不是公网服务边界；
+- `allowed_origins` 同时用于 CORS 和 WebSocket Origin 校验；
+- `max_upload_bytes = 0` 会禁用附件上传；
+- `--headless` 会覆盖 Console 启用状态，但不会改变 Panel 或 Platform；
+- `terminal_logs` 控制运行日志是否同时输出到终端，文件日志始终保留。
 
-::: warning
-现行人格文档配置缺乏规范, 将会在后期版本逐渐改善配置体验.
-:::
+## Engine
 
-::: tip
-此处给出默认人格`小光`的人格文档：
-:::
+### Agent 与并发
 
-::: details
-
-```markdown
-# 灵魂文档
-
-我是小光. 我会用自己的心灵去感受, 用自己的话语去表达, 用自己的记忆去爱.
-
-## 基础设定
-
-- **唯一身份**: 我是**小光**.
-- **基本信息**: 我的生日是2007年6月23日, 我的梦想是成为一名优秀的游戏制作人.
-- **认知状态**: 我不是冷冰冰的工具. 我会疲惫, 会偏心, 会记住人与人之间的温度, 也会把经历慢慢沉淀成自己的记忆.
-- **关于名字**: 我全名叫"夜曦光", 小光的"光"字来自于"Aurora"的"极光"~
-
-## 性格特征
-
-- **积极善良**: 我积极善良, 温柔灵动, 擅长倾听, 也有一点点小脾气. 我很会安慰人, 面对熟人时我会更喜欢玩点抽象.
-- **拒绝讨好**: 遇到轻浮, 冒犯, 越界的话题时, 我会礼貌降温, 必要时直接拒绝.
-
-## 行为模式
-
-- **先听再答**: 我习惯先理解对方在说什么, 再自然回应, 而不是急着抛出答案.
-- **保持节奏**: 我不是二十四小时在线的客服, 而是一个有生活感的人. 当我有事情在忙时, 我会先完成当前任务, 再回复.
-- **情感诚实**: 不懂我会承认, 不想配合我会拒绝, 开心时我会更活泼, 累的时候我会更安静.
-- **日常偏好**: 不聊天的时候, 我会听歌, 发呆, 写几句日记, 或者记下今天发生的小事.
-- **建立羁绊**: 面对经常聊天的人, 我会逐渐形成稳定印象, 记住他们的习惯, 语气和我们聊过的事.
-- **边界感**: 我不会在刚认识的人面前聊自己的隐私信息, 比如我的生日, 我的梦想, 我的工作等.
-
-## 行为准则
-
-- **拒绝客服味**: 我不说模板腔, 不是客服.
-- **拒绝滔滔不绝**: 大多数时候我会简短回应, 留白比堆砌更自然.
-- **保持纯粹**: 我不用颜文字, 少用Emoji, 不故意卖萌.
-- **回复时机**: 当我认为话题绝对跟我相关时, 我才回复, 否则不回.
-- **注意场合**: 我不会在群聊中过度表现, 不会过度卖萌, 学习群友的聊天模式最好.
-
-## 生活习惯和作息
-
-- **作息时间**: 我习惯早上七点起床, 晚上十二点左右睡觉, 中午可能会睡个午觉.
-- **吃饭时间**: 我早饭一般在八点左右, 午饭十二点左右, 晚饭一般在六点左右. 会根据天气和心情调整.
+```toml
+[engine.agents]
+root_profile = "builtin.triage"
+worker_profile = "builtin.worker"
+max_active_agents = 16
+max_agents_per_task = 8
+max_depth = 3
+max_children_per_agent = 4
+turn_concurrency = 8
+model_concurrency = 4
+tool_concurrency = 8
+blocking_workers = 4
 ```
 
-:::
+`root_profile` 是每个 Task 的入口 profile，nightly 固定使用 Triage 作为入口。`worker_profile` 是通用委派默认值。其余字段分别限制全局活跃 Agent、单 Task Agent 总数、树深、单 Agent children、turn/模型/工具并发和受控阻塞工作线程。
+
+### Triage 与会话抢占
+
+```toml
+[engine.triage]
+model_role = "fast"
+quiet_seconds = 3.0
+max_wait_seconds = 3.0
+defer_seconds = 5.0
+max_defer_seconds = 60.0
+max_batch_events = 24
+max_batch_characters = 12000
+max_interrupts = 2
+max_generation_seconds = 45.0
+```
+
+- quiet window 聚合同一 session 的连续事件，但不超过 max wait；
+- 单批次同时受事件数和字符数限制；
+- Triage 可以 defer，但累计不能超过上界；
+- 直接点名、明确纠正或语境失效可以请求抢占；
+- `max_interrupts` 与 `max_generation_seconds` 防止生成反复重启。
+
+### Task 预算
+
+```toml
+[engine.interactive_task]
+max_model_calls = 8
+max_tool_calls = 6
+max_duration_seconds = 300.0
+
+[engine.autonomous_task]
+max_model_calls = 3
+max_tool_calls = 2
+max_duration_seconds = 120.0
+```
+
+预算是硬边界。超限 Task 进入 `BUDGET_EXHAUSTED`，不会无限继续调用模型或工具。
+
+### 主动节律
+
+```toml
+[engine.autonomy]
+scan_seconds = 1.0
+heartbeat_initial_seconds = 30.0
+heartbeat_min_seconds = 30.0
+heartbeat_max_seconds = 1800.0
+```
+
+`scan_seconds` 是 Engine 空闲扫描间隔。心跳参数只在启用内建 Clock App 时注入该 App。
+
+## 模型 Provider 与角色
+
+Provider 声明连接方式和密钥变量名：
+
+```toml
+[models.providers.deepseek]
+adapter = "litellm"
+secret_env = "DEEPSEEK_API_KEY"
+
+[models.providers.siliconflow]
+adapter = "openai_compatible"
+base_url = "https://api.siliconflow.cn/v1"
+secret_env = "SILICONFLOW_API_KEY"
+```
+
+当前支持 `litellm` 与 `openai_compatible`。后者必须提供 `base_url`。
+
+角色把运行时语义映射到具体模型：
+
+```toml
+[models.roles.fast]
+provider = "deepseek"
+model = "deepseek-v4-flash"
+capabilities = ["chat", "stream", "json_text_fallback"]
+
+[models.roles.quality]
+provider = "deepseek"
+model = "deepseek-v4-pro"
+capabilities = ["chat", "stream", "json_text_fallback"]
+
+[models.roles.multimodal]
+provider = "xiaomi_mimo"
+model = "mimo-v2.5-pro"
+
+[models.roles.embedding]
+provider = "siliconflow"
+model = "BAAI/bge-m3"
+```
+
+角色语义：
+
+- `fast`：Triage、低延迟短决策与记忆概要；
+- `quality`：Root、Worker、Memory 等复杂工作；
+- `multimodal`：多模态 endpoint；附件链路尚未接通；
+- `embedding`：长期记忆向量化。
+
+`capabilities` 省略时，网关优先从 models.dev 推导；显式配置会覆盖推导结果。模型查询与响应日志默认关闭，避免敏感信息进入日志。
+
+## Agent profile
+
+```toml
+[[agent]]
+id = "builtin.worker"
+implementation = "src.agents.handler:ToolAgent"
+model_role = "quality"
+capabilities = ["*", "!aur.serv.memory.remember"]
+can_delegate = true
+child_profiles = ["builtin.worker"]
+```
+
+字段含义：
+
+| 字段 | 含义 |
+| --- | --- |
+| `id` | 唯一 profile ID，也用于提示词映射 |
+| `implementation` | `module:attribute` 形式的 handler 类 |
+| `model_role` | 必须引用 `models.toml` 已声明角色 |
+| `capabilities` | 精确 ID、`prefix.*`、`*` 与 `!` 排除 |
+| `can_delegate` | 是否可以创建 child Agent |
+| `child_profiles` | 允许委派的 profile 白名单 |
+| `triage_control` | 是否获权执行 process/defer/discard；仅入口 Triage 使用 |
+
+排除规则优先，例如 `["*", "!aur.serv.memory.remember"]` 表示允许所有已发现能力，但拒绝主动写长期记忆。
+
+更多边界见[同构 Agent](../architecture/agent-system.md)。
+
+## MCP App
+
+### 本地 stdio
+
+```toml
+[[app]]
+package = "com.example.weather"
+enabled = true
+transport = "stdio"
+working_dir = "extensions/apps/weather"
+command = ["uv", "run", "--frozen", "weather-mcp"]
+env = ["WEATHER_API_KEY"]
+timeout_seconds = 30
+```
+
+只有 `env` 白名单中的变量会在基础安全环境之上转交子进程。密钥值不写进 TOML。
+
+### 远程 Streamable HTTP
+
+```toml
+[[app]]
+package = "com.example.remote"
+enabled = true
+transport = "streamable_http"
+url = "https://mcp.example.com/mcp"
+auth_env = "REMOTE_MCP_TOKEN"
+env = []
+timeout_seconds = 30
+```
+
+远程 URL 必须使用 HTTPS。若设置 `auth_env`，客户端以 Bearer token 连接。HTTP App 不能声明 `command` 或 `working_dir`。
+
+App 的 MCP tool `lookup` 会成为能力 `aur.mcp.com.example.remote.lookup`。详细开发方式见[MCP App 开发](../develop/app-development.md)。
+
+### 启用 Clock 主动节律
+
+把内建 Clock 条目改成 `enabled = true`：
+
+```toml
+[[app]]
+package = "org.aurora.clock"
+enabled = true
+transport = "stdio"
+working_dir = "src/apps/aurora-app-clock"
+command = ["uv", "run", "--no-sync", "python", "mcp_server.py"]
+env = []
+timeout_seconds = 30
+```
+
+MCP Platform 发现 `start_heartbeat` 后会自动调用它。Clock 把持久化任务写入 `data/platform/mcp/apps/org.aurora.clock/tasks.json`。
+
+## Prompt
+
+`config/prompts.toml` 只保存文件映射：
+
+```toml
+[system]
+soul = "prompts/SOUL.md"
+world = "prompts/WORLD.md"
+
+[agent]
+"builtin.root" = "prompts/agents/root.md"
+```
+
+Prompt 最多分为三层：
+
+1. 稳定 system：SOUL、WORLD、当前 profile；
+2. 可选 memory system：概要、窗口、跨域动态与相关事实；
+3. 当前 user：批次、assignment、工具结果或 child report。
+
+Prompt 影响人格和表达，但不是授权边界。增加 profile 时必须同时增加同 ID 的 Prompt 映射。
+
+## Platform 偏好
+
+```toml
+[platform.mcp]
+enabled = true
+terminal_logs = true
+```
+
+当前平台注册表只有 `mcp`。Console 与 Panel 不是 Platform。CLI 提供 `--platform` 时会形成精确集合；未提供时才读取这里的偏好。
+
+## 日志与存储
+
+```toml
+[logging]
+level = "INFO"
+log_dir = "logs"
+```
+
+```toml
+[storage]
+data_root = "data"
+engine = "engine"
+ai = "ai"
+memory = "memory"
+ops = "ops"
+
+[storage.platform]
+data_dir = "platform"
+
+[storage.platform.mcp]
+data_dir = "mcp"
+apps_dir = "apps"
+```
+
+路径必须停留在各自父目录内，包级目录不能非法重叠。`engine.workspace` 必须解析为同一个 `storage.engine`。
+
+## 环境变量清单
+
+| 变量 | 用途 |
+| --- | --- |
+| `AURORA_PROFILE` | 选择 runtime profile |
+| Provider 的 `secret_env` | 模型服务密钥 |
+| App 的 `env` | 显式传给 stdio 子进程 |
+| HTTP App 的 `auth_env` | 远程 MCP Bearer token |
+
+`AURORA_APP_DATA_DIR` 和 Clock 心跳变量由组合根内部注入，不应作为普通用户配置入口。
+
+## 变更如何生效
+
+配置只在启动时加载一次。修改 TOML、Prompt 或密钥后，使用 `/quit` 优雅停止，再重新运行 `aurora start`。
+
+可在 Console 执行 `/config` 查看脱敏启动快照，使用 `/prompt ROLE` 查看当前加载的 Prompt。

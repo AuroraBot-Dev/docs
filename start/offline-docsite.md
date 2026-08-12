@@ -1,49 +1,43 @@
----
-title: 离线文档
-description: 如何在本地查看文档站。
-order: 4
----
+# 本地预览文档
 
-# 离线文档
+文档站使用 VitePress 1.6、Mermaid 和本地搜索。
 
-在本地查看文档站.
+## 环境
 
-::: info
-自从版本 `v0.0.4` 开始, 文档站已从主仓库分离. 你可以在 [此处](https://github.com/AuroraBot-Dev/docs) 查看文档仓库.
-:::
+- Node.js LTS；
+- npm；
+- Git。
 
-## 前期准备
-
-- `Node.js >=20`
-
-## 克隆仓库
+## 克隆与安装
 
 ```bash
-git clone https://github.com/AuroraBot-Dev/docs.git
-cd docs
+git clone https://github.com/AuroraBot-Dev/docs.git AuroraBot-docs
+cd AuroraBot-docs
+npm ci
 ```
 
-## 安装依赖
+## 开发服务器
 
 ```bash
-npm install
+npm run docs:dev
 ```
 
-::: tip
-如果你的网络环境不好导致 `npm` 下载缓慢, 你可以尝试使用以下命令来加速下载:
+默认地址为 `http://127.0.0.1:5173`，开发脚本会监听 `0.0.0.0`。
+
+## 生产构建
 
 ```bash
-npm install --registry=https://registry.npmmirror.com
+npm run docs:build
 ```
 
-:::
+输出位于 `.vitepress/dist`。构建会校验站内链接；不要用忽略死链掩盖已删除的旧架构页面。
 
-## 启动文档站
+## 内容基准
 
-```bash
-npm run dev
-```
+文档事实按以下顺序核对：
 
-::: tip
-文档站默认启动在 `localhost:5173/` 上. 打开浏览器访问即可.
-:::
+1. 主仓库 [RFC 0300](https://github.com/AuroraBot-Dev/AuroraBot/blob/nightly/docs/rfc/0300-unified-architecture-and-contracts.md)；
+2. nightly 当前 contracts、配置和测试；
+3. `ARCHITECTURE.md`、`TECHNICAL.md`、README 与代码注释。
+
+若模块尚未形成公共边界，文档应明确写“文档正在编写中”，不能用路线图设想冒充已实现功能。

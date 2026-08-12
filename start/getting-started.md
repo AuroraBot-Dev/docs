@@ -1,126 +1,160 @@
----
-title: 快速开始
-description: 从环境准备到启动运行，快速把 AuroraBot 跑起来。
-order: 2
----
-
 # 快速开始
 
-从环境准备到启动运行，快速把 AuroraBot 跑起来。
+本页从一个干净目录启动 `nightly@97a5bdb`。当前推荐源码运行。
 
-::: info
-此版本暂时只支持从源码运行. 后期会提供一键包安装.
-:::
+## 环境要求
 
-## 前期准备
+| 依赖 | 要求 |
+| --- | --- |
+| Python | `>=3.12, <3.15`；推荐 3.12 |
+| Git | 能克隆 GitHub 仓库 |
+| uv | Python 包与虚拟环境管理 |
+| 模型凭据 | 默认配置需要 `DEEPSEEK_API_KEY` |
 
-- `Python >=3.12, <3.13`
+Web 管理面板还需要 Node.js 22.18+ 或 24.12+ 与 pnpm 11+，但它不是启动核心运行时的前置条件。
 
-::: info
-当前仅支持 Python 3.12 版本. 理论将支持 Python 3.12 以上所有版本.
-:::
-
-## 克隆仓库
+## 1. 克隆 nightly
 
 ```bash
-git clone https://github.com/AuroraBot-Dev/AuroraBot.git
+git clone --branch nightly --single-branch https://github.com/AuroraBot-Dev/AuroraBot.git
 cd AuroraBot
 ```
 
-::: tip
-或者你可以通过 [Releases](https://github.com/AuroraBot-Dev/AuroraBot/releases) 下载最新稳定版本的源码压缩包, 并解压到 `AuroraBot` 目录下.
-:::
-
-## 安装依赖
-
-我们推荐使用 [uv](https://github.com/astral-sh/uv) 管理依赖:
+确认当前版本：
 
 ```bash
-pip install uv
+git branch --show-current
+git describe --tags --always
+```
+
+第一条应输出 `nightly`。本文对齐的描述为 `v0.5.0-alpha.5-10-g97a5bdb`；分支继续前进后提交号可能不同。
+
+## 2. 安装依赖
+
+```bash
+uv sync --no-dev
+```
+
+需要运行测试或参与开发时，改用：
+
+```bash
 uv sync
 ```
 
-::: tip
-如果你的网络环境不好导致 `pip` 下载缓慢, 你可以尝试使用以下命令来加速下载:
+## 3. 配置密钥
 
-```bash
-pip install uv -i https://pypi.tuna.tsinghua.edu.cn/simple
-uv sync
-```
+::: code-group
 
-:::
-
-## 配置密钥
-
-```bash
+```bash [Linux / macOS]
 cp .env.example .env
 ```
 
-::: tip 配置模型和密钥
-在 `.env` 中配置你的模型和密钥. 其中快速模型是必须的, 其他模型可以根据需要配置.
-
-```
-# 模型配置
-LLM_GATEWAY_FAST_MODEL=openai/gpt-4o-mini
-LLM_GATEWAY_QUALITY_MODEL=openai/gpt-4o
-LLM_GATEWAY_MULTIMODAL_MODEL=openai/gpt-4o
-LLM_GATEWAY_EMBEDDING_MODEL=openai/text-embedding-3-small
-LLM_GATEWAY_RERANKER_MODEL=
-
-# 密钥配置
-OPENAI_API_KEY=sk-your-key-here
+```powershell [PowerShell]
+Copy-Item .env.example .env
 ```
 
 :::
 
-::: tip
-如果你使用的模型并非 OpenAI 模型, 那么请确保配置了正确的密钥. 比如一个可能的有效配置如下:
+编辑 `.env`：
 
-```
-# 模型配置
-LLM_GATEWAY_FAST_MODEL=deepseek/deepseek-v4-flash
-LLM_GATEWAY_QUALITY_MODEL=deepseek/deepseek-v4-pro
-LLM_GATEWAY_MULTIMODAL_MODEL=xiaomi_mimo/mimo-v2.5-pro
-LLM_GATEWAY_EMBEDDING_MODEL=siliconflow/BAAI/bge-m3
-LLM_GATEWAY_RERANKER_MODEL=
-
-# 密钥配置
-DEEPSEEK_API_KEY=sk-xxx
-SILICONFLOW_API_KEY=sk-xxx
-XIAOMI_MIMO_API_KEY=sk-xxx
-OPENAI_API_KEY=
+```dotenv
+DEEPSEEK_API_KEY=你的密钥
 ```
 
-:::
+`.env` 不会被 AuroraBot 自动读取，后面的启动命令会显式使用 `uv --env-file`。结构配置必须写在 `config/*.toml`，不要放进 `.env`。
 
-::: tip
-更多模型提供商/模型列表见 [Litellm](https://docs.litellm.ai/docs/providers)
-:::
+## 4. 处理默认 Aurora-QQ 条目
 
-::: tip
-更多配置说明见 [配置说明](./configuration)
-:::
+当前 nightly 的 `config/apps.toml` 默认启用了仓库外的 Aurora-QQ 扩展。这是已登记的 0.5 alpha 交付缺口；干净克隆若没有该扩展，MCP 启动会失败。
 
-## 启动 Bot
+首次体验时，请把对应条目改成：
+
+```toml
+[[app]]
+package = "org.aurora.qq"
+enabled = false
+```
+
+若你确实要接入 QQ，请先安装 Aurora-QQ 和 NapCat，再保留 `enabled = true`。详见[常见问题：如何接入 QQ](../reference/faq.md#如何接入-qq)。
+
+## 5. 启动
 
 ```bash
-uv run python bot.py
+uv run --no-dev --env-file .env aurora start
 ```
 
-::: tip
-此时你的Bot将会以默认人格**小光**启动。启动后你可以直接在命令行(localhost)中与她对话:
+默认组合会：
 
-- 直接输入文字即可向小光发送消息
-- 输入 `/help` 查看可用命令
-- 输入 `/quit` 退出
+- 启动 Engine 与后台 pump；
+- 按 `config/platforms.toml` 启动 MCP Platform；
+- 启动本地 Console；
+- 在 `127.0.0.1:8765` 启动 Panel 后端；
+- 把运行日志写入 `logs/aurora.log`。
 
-无需任何应用或适配器即可在控制台中体验完整的认知管线！
+看到以下提示后，可直接输入普通文本：
+
+```text
+AuroraBot local console; 输入 /help 查看命令。
+You>
+```
+
+输入 `/help` 查看当前操作目录；输入 `/quit` 请求优雅停机。不要使用旧文档中的 `/status`，nightly 没有该别名；运行态查询是 `/engine/status`。
+
+## 6. 验证后端
+
+另开终端：
+
+```bash
+curl http://127.0.0.1:8765/healthz
+```
+
+预期返回：
+
+```json
+{"ok":true,"status":"ok","profile":"prod"}
+```
+
+完整 Panel 接入见 [Web 管理面板](./panel.md)。
+
+## 常用启动方式
+
+```bash
+# 使用 runtime.toml 的默认 profile 和 platforms.toml 的平台偏好
+uv run --no-dev --env-file .env aurora start
+
+# 选择 dev runtime profile
+uv run --no-dev --env-file .env aurora --profile dev start
+
+# 不启动本地 Console；Panel 与平台组合保持不变
+uv run --no-dev --env-file .env aurora start --headless
+
+# 精确选择 MCP 平台；不会与默认集合叠加
+uv run --no-dev --env-file .env aurora start --platform mcp
+
+# 从其他工作目录指定项目根
+uv run --no-dev --env-file /path/to/AuroraBot/.env aurora --root /path/to/AuroraBot start
+```
+
+::: warning `--headless` 的含义
+`--headless` 只禁用本地 Console。它不会禁用 MCP，也不会关闭 Panel。要禁用 MCP，请修改 `config/platforms.toml`；要关闭 Panel，请修改 `config/runtime.toml`。
 :::
 
-::: tip
-如果想接入 QQ，可以启动你的应用适配器，例如 [NapCat](https://github.com/NapNeko/NapCatQQ)。由于 AuroraBot 基于 NoneBot2 框架，你可以参考 [NapCat 官方文档](https://napneko.github.io/use/integration#nonebot) 来对接 NapCat 适配器。
-:::
+## 首次启动失败
 
-::: info
-App/Platform 层正在转向 MCP 主路径。QQ 接入仍依赖 OneBot/NapCat，但新 App 开发应优先参考 [App 开发指南](../develop/app-development.html)。
-:::
+### 缺少模型凭据
+
+检查 `config/models.toml` 中角色使用的 Provider，以及对应 `secret_env` 是否存在于当前进程。默认 Fast 与 Quality 都使用 `DEEPSEEK_API_KEY`。
+
+### MCP 工作目录或命令失败
+
+先关闭 `config/apps.toml` 中未安装的 App。当前启动前诊断尚未完全闭环，一些错误会在创建 MCP 子进程时才出现。
+
+### 端口 8765 被占用
+
+修改 `config/runtime.toml` 的 `runtime.panel.port`，并同步更新 Panel 前端代理或 API 地址。
+
+### 语义记忆降级
+
+这不一定阻止启动。Embedding、mem0 或 Chroma 不可用时，记忆会降级到 durable facts 的确定性关键词检索；可通过 `/memory/status` 查看状态。
+
+下一步阅读[配置](./configuration.md)和[运行与操作](./operations.md)。

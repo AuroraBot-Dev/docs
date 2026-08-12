@@ -1,107 +1,177 @@
----
-title: 架构总览
-description: AuroraBot 重构完成后的 App/Platform/Brain 边界。
-order: 1
----
+# 系统总览
 
-# 架构总览
+AuroraBot 的现行实现围绕一条 Agent 热路径和一条检查路径展开。SQLite 是运行态、终态和恢复的权威；没有文件 Inbox、JSON 归档或 JSONL 会话日志。
 
-AuroraBot 的目标架构分为三层：MCP App、Platform、Brain。
-
-这三层的边界必须清楚：
-
-- App 接外部世界。
-- Platform 管协议和安全边界。
-- Brain 维护生命体的认知连续性。
-
-## 代码结构
-
-```text
-AuroraBot/
-├── apps/                      # 可选：本地样例或内置 App；不是 MCP Server 固定位置
-├── src/
-│   ├── main.py                # NoneBot 启动钩子
-│   ├── platform/
-│   │   └── mcp_kit/           # MCP Server 生命周期、Client 连接、AMP 兼容桥
-│   └── brain/
-│       ├── runtime.py         # Brain 运行时
-│       ├── kernel/            # 文件事件、调度、状态存储
-│       ├── nodes/             # 当前旧节点体系，等待重设计
-│       ├── memory/            # 记忆存储与检索
-│       ├── ai/                # LiteLLM 模型网关
-│       ├── prompts/           # 人格与认知提示词
-│       └── localhost/         # 本地控制台
-└── data/
-    ├── kernel/                # Brain 运行痕迹
-    ├── memory/                # 记忆数据
-    └── app_data/              # App 私有数据
-```
-
-## 运行时路径
+## 全景
 
 ```mermaid
-sequenceDiagram
-    participant World as 外部世界
-    participant App as MCP App Server
-    participant Platform as Platform MCP Client
-    participant Bridge as AMP Compatibility Bridge
-    participant Brain as Brain
+flowchart TB
+    subgraph Frontends["输入与呈现"]
+        Console["Local Console"]
+        Panel["Panel / Ops"]
+        Apps["MCP Apps"]
+    end
 
-    World->>App: 外部变化
-    App->>Platform: MCP tools/resources/notifications
-    Platform->>Bridge: 归一化 MCP 信号
-    Bridge->>Brain: 写入统一事件入口
-    Brain->>Brain: 形成体验、检索记忆、选择行动
-    Brain->>Platform: tools/call
-    Platform->>App: MCP Tool 调用
-    App->>World: 执行动作
+    subgraph Root["aurora 组合根"]
+        Compose["配置快照与生命周期"]
+    end
+
+    subgraph Hot["Engine 热路径"]
+        Ingress["AMP / Conversation Ingress"]
+        Inbox["Inbox + Session Lane"]
+        Agent["Triage / Fast / Root / Worker / Memory"]
+        Activity["Model / Tool Activity"]
+        Store["SQLite Runtime Store"]
+    end
+
+    subgraph Implementations["注入的具体实现"]
+        AI["AI Model Gateway"]
+        Memory["Memory Service"]
+        MCP["MCP Platform"]
+        Prompts["Prompt Composer"]
+    end
+
+    Console --> Ingress
+    Panel --> Ingress
+    Apps --> MCP --> Ingress
+    Compose --> Hot
+    Ingress --> Inbox --> Agent --> Activity
+    Activity --> AI
+    Activity --> Memory
+    Activity --> MCP
+    AI --> Agent
+    Memory --> Agent
+    MCP --> Agent
+    Agent --> Store
+    Store --> Console
+    Store --> Panel
+    Prompts --> Agent
 ```
 
-## App 层
+## 包职责
 
-App 是外部能力的 MCP Server。它可以在主仓库内，也可以在独立仓库、本机任意目录或远程服务中；Platform 通过 MCP 连接信息和外围元信息发现并使用它。
-
-| MCP 能力 | AuroraBot 用法 |
+| 包 | 职责 |
 | --- | --- |
-| Tools | 发送消息、查询天气、写日记、设置闹钟等有副作用或计算动作 |
-| Resources | App 私有只读状态，如日记索引、闹钟列表、能力说明 |
-| Prompts | App 自己的辅助模板；不得覆盖 Brain 核心人格与认知提示词 |
-| Notifications | 标准 MCP 通知；Platform 负责映射为 AMP，`aurora/event` 只是可选原生扩展 |
+| `src/contracts` | 跨层不可变 DTO、枚举与 Port Protocol |
+| `src/utils` | 无业务状态的通用工具 |
+| `src/config` | 严格 TOML 加载、校验与不可变快照 |
+| `src/prompt` | Prompt 目录、分层 DTO 与上下文装配 |
+| `src/engine` | 事件、Task/Agent、邮箱、Activity、调度、因果与运行态存储 |
+| `src/agents` | 纯 handler 与模型可见的主动能力 |
+| `src/ai` | Provider、模型角色、能力缓存、调用与费用统计 |
+| `src/memory` | 窗口、概要、跨域动态、长期事实与主动记忆 |
+| `src/platform` | 外部生态输入与效果适配；当前仅 MCP |
+| `src/console` | 本地输入和只读输出渲染 |
+| `ops` | 热路径外操作、查询、认证、附件、Panel 与调试 sidecar |
+| `aurora` | 唯一进程组合根和生命周期所有者 |
 
-App 不保留旧 `PlatformAPI` 依赖，也不通过 `ApplicationHost` 注册命令。
+`src/sandbox` 保持孤立，当前 Agent 运行时不启用。
 
-## Platform 层
+## 依赖方向
 
-Platform 是边界层，不是决策层。
+```mermaid
+flowchart BT
+    Base["contracts + utils"]
+    Engine["engine"]
+    Platform["platform"]
+    Ops["ops"]
+    Agents["agents"]
+    AI["ai"]
+    Memory["memory"]
+    Prompt["prompt"]
+    Config["config"]
+    Console["console"]
+    Aurora["aurora"]
 
-它负责：
+    Engine --> Base
+    Platform --> Base
+    Ops --> Base
+    Agents --> Base
+    Agents --> Prompt
+    AI --> Base
+    Memory --> Base
+    Prompt --> Base
+    Config --> Base
+    Console --> Base
+    Aurora --> Engine
+    Aurora --> Platform
+    Aurora --> Ops
+    Aurora --> Agents
+    Aurora --> AI
+    Aurora --> Memory
+    Aurora --> Prompt
+    Aurora --> Config
+    Aurora --> Console
+```
 
-- 读取 `apps/config.yml`、本地 manifest、registry 或其他外围元信息。
-- 启停本地或远程 MCP Server。
-- 为每个 Server 建立独立 MCP Client session。
-- 聚合 `tools/list`，检测工具名冲突。
-- 执行 `tools/call`。
-- 接收 MCP lifecycle、tools、resources、prompts、notifications 等信号，并把归一化后的 AMP 事件交给 Brain。
-- 执行超时、权限、日志和崩溃隔离策略。
+硬边界：
 
-它不负责：
+- Engine 不导入 AI、Memory、Agents、Prompt、Config、Platform、Console、Ops 或 Aurora；
+- Platform 不导入 Engine 或 Ops；
+- Ops 不被热路径实现依赖；
+- Agent handler 不直接写运行态或执行外部效果；
+- 跨层 DTO 和 Protocol 只定义在 contracts；
+- 一个进程只有一个 Engine owner；
+- `src` 不反向导入 `aurora`。
 
-- 替用户或 Brain 决定该不该调用工具。
-- 把 App 私有数据直接塞进 Brain。
-- 维护人格、情绪、长期记忆。
+这些边界由 `tests/test_dependency_boundaries.py` 保护。
 
-## Brain 层
+## 组合根
 
-Brain 当前处于重设计阶段。稳定边界只有三条：
+`aurora.runtime` 的启动顺序：
 
-1. 所有外部变化都先转成统一事件。
-2. 所有行动都从 Brain 的主体状态中产生，再通过 MCP Tool 执行。
-3. Brain 内部可以继续使用文件作为可追溯状态载体，但具体节点拓扑不稳定。
+1. 读取所有 TOML 与 Prompt，生成不可变配置；
+2. 创建 Prompt catalog、Agent handler、ModelGateway 和 MemoryService；
+3. 创建 AgentEngine，并通过 Port 注入模型与记忆；
+4. 创建已选择 Platform，发现工具并绑定 ToolExecutor；
+5. 创建 Panel 后端和可选 Console；
+6. 启动 Engine pump、后台任务和共享停止信号；
+7. 发生停止或后台错误时按有界顺序关闭所有资源。
 
-详情见 [Brain 架构重设计](./brain-redesign.html)。
+启动部分失败时，`AsyncExitStack` 会回收已经创建的资源。后台任务意外结束会传播到进程所有者，而不是静默消失。
 
-## 下一步阅读
+## 热路径与检查路径
 
-- 平台细节：[平台运行时](./platform-runtime.html)
-- App 写法：[App 开发指南](../develop/app-development.html)
-- MCP 背景：[MCP 模型上下文协议](../appendix/mcp-model-context-protocol.html)
+### 热路径
+
+```text
+输入 → AMP 持久化 → Inbox → Triage → Agent turn
+    → Model/Tool Activity → 回执 → 决策提交 → 输出/终态 → 记忆投影
+```
+
+Engine 只认识 contracts Port，不知道具体 Provider、MCP client 或 mem0 实现。
+
+### 检查路径
+
+```text
+Console 命令 / Panel REST
+    → OperationSpec
+    → 窄查询或输入 Port
+    → OperationResult
+```
+
+Ops 不参与 pump。Console 与 Panel 都读取 Engine 的因果与输出投影，不建立第二套对话权威。
+
+## 数据权威
+
+| 数据 | 权威位置 |
+| --- | --- |
+| Task、Agent、消息、Activity、Inbox、因果、输出提交流 | `data/engine/runtime.sqlite3` |
+| 模型费用 | `data/ai/cost.sqlite3` |
+| 窗口、概要、durable facts | `data/memory/memory.sqlite3` |
+| mem0 历史与 Chroma | `data/memory/` |
+| Panel session 与附件索引 | `data/ops/panel.sqlite3` |
+| Panel bootstrap token 与附件 | `data/ops/Token.txt`、`uploads/` |
+| MCP App 私有数据 | `data/platform/mcp/apps/` |
+
+详细迁移与安全边界见 [Ops 与持久化](./operations-storage.md)。
+
+## 设计权威
+
+冲突时采用以下优先级：
+
+1. [RFC 0300](https://github.com/AuroraBot-Dev/AuroraBot/blob/nightly/docs/rfc/0300-unified-architecture-and-contracts.md)；
+2. nightly 当前公共 contracts 与测试；
+3. 主仓库 `ARCHITECTURE.md`、`TECHNICAL.md`、README、配置样例和代码注释。
+
+旧 Kernel、Brain、Node 与多份并行 RFC 不再是现行架构的一部分。

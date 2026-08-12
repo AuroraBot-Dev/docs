@@ -1,15 +1,14 @@
 import { defineConfig } from "vitepress";
 import { withMermaid } from "vitepress-plugin-mermaid";
-import { generateSidebar } from "vitepress-sidebar";
 
 export default withMermaid(
   defineConfig({
     title: "AuroraBot 文档站",
-    description: "AuroraBot — 新一代内驱式、自主决策的智能体框架",
+    description: "AuroraBot — 以因果事件、同构 Agent 和主动节律为核心的自主智能体框架",
     base: "/",
     cleanUrls: true,
     lastUpdated: true,
-    ignoreDeadLinks: true,
+    ignoreDeadLinks: false,
     srcExclude: ["README.md", "README.*.md"],
     head: [
       [
@@ -38,35 +37,52 @@ export default withMermaid(
     themeConfig: {
       nav: [
         { text: "首页", link: "/" },
-        { text: "开始", link: "/start/overview" },
-        { text: "开发", link: "/develop/app-development" },
+        { text: "开始", link: "/start/getting-started" },
         { text: "架构", link: "/architecture/system-overview" },
-        { text: "问答", link: "/qa/cross-platform" },
+        { text: "开发", link: "/develop/app-development" },
+        { text: "Nightly 状态", link: "/reference/nightly-status" },
       ],
-      sidebar: (() => {
-        const raw = generateSidebar({
-          documentRootPath: ".",
-          scanStartPath: ".",
-          resolvePath: "/",
-          useTitleFromFileHeading: true,
-          useFolderTitleFromIndexFile: true,
-          includeFolderIndexFile: false,
-          sortMenusByFrontmatterOrder: true,
-          frontmatterOrderDefaultValue: 99,
-          collapsed: false,
-          excludeByGlobPattern: ["README.md", "README.*.md"],
-        });
-        // 确保每个 link 以 "/" 开头，否则 VitePress prev/next 匹配会失效
-        const prefixSlash = (items: any) => {
-          for (const item of items) {
-            if (item.link && !item.link.startsWith("/"))
-              item.link = "/" + item.link;
-            if (item.items) prefixSlash(item.items);
-          }
-        };
-        prefixSlash(raw);
-        return raw;
-      })(),
+      sidebar: [
+        {
+          text: "开始使用",
+          items: [
+            { text: "认识 AuroraBot", link: "/start/overview" },
+            { text: "快速开始", link: "/start/getting-started" },
+            { text: "配置", link: "/start/configuration" },
+            { text: "运行与操作", link: "/start/operations" },
+            { text: "Web 管理面板", link: "/start/panel" },
+            { text: "本地预览文档", link: "/start/offline-docsite" },
+          ],
+        },
+        {
+          text: "架构",
+          items: [
+            { text: "系统总览", link: "/architecture/system-overview" },
+            { text: "事件与运行时", link: "/architecture/event-runtime" },
+            { text: "同构 Agent", link: "/architecture/agent-system" },
+            { text: "记忆系统", link: "/architecture/memory-system" },
+            { text: "MCP Platform", link: "/architecture/platform-runtime" },
+            { text: "Ops 与持久化", link: "/architecture/operations-storage" },
+          ],
+        },
+        {
+          text: "扩展与开发",
+          items: [
+            { text: "MCP App 开发", link: "/develop/app-development" },
+            { text: "Agent 扩展", link: "/develop/agent-development" },
+            { text: "AMP 事件协议", link: "/develop/amp" },
+            { text: "CLI 参考", link: "/develop/aur-cli" },
+            { text: "参与开发", link: "/develop/contributing" },
+          ],
+        },
+        {
+          text: "参考",
+          items: [
+            { text: "Nightly 实现状态", link: "/reference/nightly-status" },
+            { text: "常见问题", link: "/reference/faq" },
+          ],
+        },
+      ],
       search: {
         provider: "local",
       },

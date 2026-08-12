@@ -1,13 +1,16 @@
 # AuroraBot Docs
 
-AuroraBot is an autonomous agent framework built around unified event cognition, MCP-native Apps, and traceable cognitive state.
+The public documentation for AuroraBot: an autonomous-agent framework built around causal events, isomorphic Agents, and proactive rhythms.
 
-The Chinese documentation is the source of truth during the current architecture rewrite:
+This site tracks the `nightly` branch and currently targets AuroraBot 0.5.0 alpha at commit
+[`97a5bdb`](https://github.com/AuroraBot-Dev/AuroraBot/commit/97a5bdb69d02b4faa8eb8ecd6a236fb85c129567).
+Legacy Kernel, Brain, Node, and file-inbox documents are no longer part of the current documentation.
 
-- Overview: <https://www.aurorabot.org/start/overview.html>
-- System architecture: <https://www.aurorabot.org/architecture/system-overview.html>
-- Platform runtime: <https://www.aurorabot.org/architecture/platform-runtime.html>
-- App development: <https://www.aurorabot.org/develop/app-development.html>
-- Brain redesign draft: <https://www.aurorabot.org/architecture/brain-redesign.html>
+The authored content is currently Chinese-first. Run the site locally with:
 
-English docs will be expanded after the Platform/App MCP refactor and Brain redesign settle.
+```bash
+npm ci
+npm run docs:dev
+```
+
+Production: [aurorabot.org](https://www.aurorabot.org/)
