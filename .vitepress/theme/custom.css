@@ -26,3 +26,13 @@
 .VPHero .image-bg {
   animation: breathe-glow 5s ease-in-out infinite;
 }
+
+.shooting-star-canvas {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  pointer-events: none;
+  z-index: -1;
+}

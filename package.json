@@ -6,14 +6,16 @@
   "scripts": {
     "dev": "vitepress dev . --host 0.0.0.0 --port 5173",
     "build": "vitepress build .",
+    "typecheck": "tsc --noEmit",
     "docs:dev": "vitepress dev . --host 0.0.0.0 --port 5173",
     "docs:build": "vitepress build ."
   },
   "devDependencies": {
+    "@nolebase/vitepress-plugin-enhanced-readabilities": "^2.18.2",
     "mermaid": "^11.14.0",
+    "typescript": "^5.9.3",
     "vitepress": "^1.6.4",
     "vitepress-plugin-mermaid": "^2.0.17",
-    "@nolebase/vitepress-plugin-enhanced-readabilities": "^2.18.2",
     "vitepress-sidebar": "^1.38.0"
   },
   "allowScripts": {
