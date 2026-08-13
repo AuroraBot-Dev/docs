@@ -1,3 +1,7 @@
+---
+order: 2
+---
+
 # 架构
 
 AuroraBot 的现行架构只有一条 Agent 热路径。模型与外部生态通过 contracts Port 接入，`aurora` 组合根负责把它们组装成一个进程。

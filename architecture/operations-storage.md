@@ -1,3 +1,7 @@
+---
+order: 15
+---
+
 # Ops 与持久化
 
 Ops 是热路径外的唯一操作后端。SQLite 是每个实现包的私有数据权威；Ops 通过窄 Port 查询或输入，不直接穿透到 Engine、Memory 或 AI 的实现对象。

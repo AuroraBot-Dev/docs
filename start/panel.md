@@ -1,3 +1,7 @@
+---
+order: 14
+---
+
 # Web 管理面板
 
 AuroraBot Panel 分为两个项目：

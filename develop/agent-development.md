@@ -1,3 +1,7 @@
+---
+order: 11
+---
+
 # Agent 扩展
 
 nightly 支持通过 TOML 组合新的 Agent profile，并从源码可导入路径加载 handler。稳定的起点是复用内建 `ToolAgent`；第三方 handler ABI 与分发仍在编写。

@@ -1,3 +1,7 @@
+---
+order: 10
+---
+
 # MCP App 开发
 
 AuroraBot App 是一个标准 MCP Server。App 负责自己的业务逻辑和外部协议，Platform 负责连接、工具发现、事件归一化和生命周期。

@@ -12,7 +12,9 @@
   "devDependencies": {
     "mermaid": "^11.14.0",
     "vitepress": "^1.6.4",
-    "vitepress-plugin-mermaid": "^2.0.17"
+    "vitepress-plugin-mermaid": "^2.0.17",
+    "@nolebase/vitepress-plugin-enhanced-readabilities": "^2.18.2",
+    "vitepress-sidebar": "^1.38.0"
   },
   "allowScripts": {
     "esbuild@0.21.5": true

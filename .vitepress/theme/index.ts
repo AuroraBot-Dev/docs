@@ -3,6 +3,9 @@ import DefaultTheme from "vitepress/theme";
 import type { Theme } from "vitepress";
 import Layout from "./Layout.vue";
 import "./custom.css";
+import "@nolebase/vitepress-plugin-enhanced-readabilities/client/style.css";
+import type { Options } from "@nolebase/vitepress-plugin-enhanced-readabilities/client";
+import { InjectionKey } from "@nolebase/vitepress-plugin-enhanced-readabilities/client";
 
 const theme: Theme = {
     extends: DefaultTheme,
@@ -10,6 +13,11 @@ const theme: Theme = {
     enhanceApp(ctx) {
         DefaultTheme.enhanceApp?.(ctx);
         ctx.app.component("Mermaid", Mermaid);
+        ctx.app.provide(InjectionKey, {
+            spotlight: {
+                defaultToggle: true,
+            },
+        } as Options);
     },
 };
 

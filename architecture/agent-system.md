@@ -1,3 +1,7 @@
+---
+order: 12
+---
+
 # 同构 Agent
 
 AuroraBot 不再使用旧 Brain/Node 两套抽象。Triage、Fast、Root、Worker 与 Memory 都是同一种 Agent 实例，只因 profile、上下文和 handler 不同而承担不同职责。

@@ -1,3 +1,7 @@
+---
+order: 10
+---
+
 # 系统总览
 
 AuroraBot 的现行实现围绕一条 Agent 热路径和一条检查路径展开。SQLite 是运行态、终态和恢复的权威；没有文件 Inbox、JSON 归档或 JSONL 会话日志。

@@ -1,3 +1,7 @@
+---
+order: 13
+---
+
 # 运行与操作
 
 AuroraBot 只有一套操作语义：`OperationSpec` 同时生成 Console 斜杠命令与 Panel REST 资源。两种入口共享参数校验、handler 和 `OperationResult`。

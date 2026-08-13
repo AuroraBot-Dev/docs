@@ -1,3 +1,7 @@
+---
+order: 14
+---
+
 # MCP Platform
 
 Platform 把外部生态归一化为 AMP，并执行已获权的环境效果。nightly 的平台注册表只有 MCP；Console 与 Panel 不属于 Platform。

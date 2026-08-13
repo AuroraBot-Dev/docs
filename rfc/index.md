@@ -1,3 +1,8 @@
+---
+title: RFC
+order: 5
+---
+
 # AuroraBot RFC
 
 `docs/rfc/0300-unified-architecture-and-contracts.md` 是 AuroraBot 唯一的 RFC 与设计基准。此前分散的 02xx 文件已合并，

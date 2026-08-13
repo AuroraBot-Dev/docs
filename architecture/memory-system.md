@@ -1,3 +1,7 @@
+---
+order: 13
+---
+
 # 记忆系统
 
 MemoryService 同时承载被动终态投影和主动 Memory Agent 写入。Engine 只依赖异步 `MemoryStore` Port，handler 每轮只看到已经固定的有界快照。
