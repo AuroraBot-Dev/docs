@@ -5,6 +5,7 @@ import { withSidebar, generateSidebar } from "vitepress-sidebar";
 export default withSidebar(
   withMermaid(
     defineConfig({
+      lang: "zh-CN",
       title: "AuroraBot 文档站",
       description: "AuroraBot — 以因果事件、同构 Agent 和主动节律为核心的自主智能体框架",
       base: "/",
@@ -86,23 +87,24 @@ export default withSidebar(
       },
     }),
   ),
-  {
-    documentRootPath: "/",
-    scanStartPath: "/",
-    resolvePath: "/",
-    useTitleFromFileHeading: true,
-    useTitleFromFrontmatter: true,
-    useFolderTitleFromIndexFile: true,
-    useFolderLinkFromIndexFile: true,
-    includeFolderIndexFile: true,
-    sortMenusByFrontmatterOrder: true,
-    frontmatterOrderDefaultValue: 1000,
-    excludeByGlobPattern: [
-      ".vitepress/**",
-      "node_modules/**",
-      "assets/**",
-      "public/**",
-      "README*",
-    ],
-  },
+  [
+    {
+      documentRootPath: "/",
+      scanStartPath: "/",
+      resolvePath: "/",
+      useTitleFromFileHeading: true,
+      useTitleFromFrontmatter: true,
+      useFolderTitleFromIndexFile: true,
+      useFolderLinkFromIndexFile: true,
+      includeFolderIndexFile: false,
+      sortMenusByFrontmatterOrder: true,
+      frontmatterOrderDefaultValue: 1000,
+      excludeByGlobPattern: [
+        ".vitepress/**",
+        "node_modules/**",
+        "public/**",
+        "README*",
+      ],
+    },
+  ],
 );

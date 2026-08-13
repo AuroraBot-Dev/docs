@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="./assets/logo.svg" width="120" alt="AuroraBot Logo" />
+  <img src="./public/logo.svg" width="120" alt="AuroraBot Logo" />
 </p>
 
 <h1 align="center">AuroraBot 文档站</h1>
