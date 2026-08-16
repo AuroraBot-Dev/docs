@@ -88,8 +88,10 @@ AuroraBot 是以因果事件、同构 Agent 和主动节律为核心的自主智
 - `logging.toml`：日志级别与路径；
 - `storage.toml`：包级持久化路径。
 
-未知键必须在启动前失败。profile 只能覆盖 runtime；结构和启用状态不能由环境变量任意覆盖。密钥只从 TOML 显式
-命名的环境变量读取，`.env` 仅用于本地开发注入。
+未知键必须在启动前失败。`engine.agents` 只接受 `AgentLimits` 契约列出的键：`root_profile`、`worker_profile`、
+`max_active_agents`、`max_agents_per_task`、`max_depth`、`max_children_per_agent`、`turn_concurrency`、
+`model_concurrency`、`tool_concurrency`；未进入运行时的历史键不作为配置契约保留。profile 只能覆盖 runtime；结构
+和启用状态不能由环境变量任意覆盖。密钥只从 TOML 显式命名的环境变量读取，`.env` 仅用于本地开发注入。
 
 ### 4.2 进程组合
 

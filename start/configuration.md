@@ -85,10 +85,9 @@ max_children_per_agent = 4
 turn_concurrency = 8
 model_concurrency = 4
 tool_concurrency = 8
-blocking_workers = 4
 ```
 
-`root_profile` 是每个 Task 的入口 profile，nightly 固定使用 Triage 作为入口。`worker_profile` 是通用委派默认值。其余字段分别限制全局活跃 Agent、单 Task Agent 总数、树深、单 Agent children、turn/模型/工具并发和受控阻塞工作线程。
+`root_profile` 是每个 Task 的入口 profile，nightly 固定使用 Triage 作为入口。`worker_profile` 是通用委派默认值。其余字段分别限制全局活跃 Agent、单 Task Agent 总数、树深、单 Agent children、turn/模型/工具并发。
 
 ### Triage 与会话抢占
 
