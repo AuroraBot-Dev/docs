@@ -60,14 +60,14 @@ flowchart TB
 | `src/utils` | 无业务状态的通用工具 |
 | `src/config` | 严格 TOML 加载、校验与不可变快照 |
 | `src/prompt` | Prompt 目录、分层 DTO 与上下文装配 |
-| `src/engine` | 事件、Task/Agent、邮箱、Activity、调度、因果与运行态存储 |
-| `src/agents` | 纯 handler 与模型可见的主动能力 |
+| `src/engine` | 事件、Task/Agent、邮箱、Activity、调度、因果与运行态存储；消费七类贡献 |
+| `src/agents` | 纯 handler 与 ControlAction 主动决策能力 |
 | `src/ai` | Provider、模型角色、能力缓存、调用与费用统计 |
-| `src/memory` | 窗口、概要、跨域动态、长期事实与主动记忆 |
-| `src/platform` | 外部生态输入与效果适配；当前仅 MCP |
-| `src/console` | 本地输入和只读输出渲染 |
-| `ops` | 热路径外操作、查询、认证、附件、Panel 与调试 sidecar |
-| `aurora` | 唯一进程组合根和生命周期所有者 |
+| `src/memory` | ContextContributor（recall）+ EffectTool（remember）+ Projector（终态投影） |
+| `src/platform` | EventSource/EffectTool/Lifecycle 组合适配；当前仅 MCP |
+| `src/console` | InputGateway + OutputSink 的本地交互与渲染 |
+| `ops` | 热路径外 InputGateway/Projector/OutputSink：操作、查询、认证、附件、Panel |
+| `aurora` | 唯一进程组合根：CapabilityAssembly 与生命周期所有者 |
 
 `src/sandbox` 保持孤立，当前 Agent 运行时不启用。
 
