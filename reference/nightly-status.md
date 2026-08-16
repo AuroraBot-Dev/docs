@@ -51,7 +51,6 @@ order: 10
 | SOUL/WORLD/Profile 分层 | 已实现 | Prompt 不是授权边界 |
 | 源码 `module:attribute` handler | 受限 | 只适合主仓库或可导入源码 |
 | 第三方 Agent 包与热加载 | 文档正在编写中 | 无安装、版本和状态迁移规范 |
-| Speech | 文档正在编写中 | 决策壳存在，TTS 未启用、无执行绑定 |
 | Sandbox | 文档正在编写中 | 包存在但不参与 Agent 运行时 |
 
 ## AI

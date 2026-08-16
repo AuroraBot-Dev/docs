@@ -140,8 +140,6 @@ SOUL、WORLD 和 profile Prompt 决定人格、表达和角色说明。它们不
 第三方 Agent 的独立打包、安装、自动发现、版本兼容、热加载、签名与分发规范尚未定义。当前支持的是显式源码导入与 TOML profile，不是稳定插件 ABI。详见[Agent 扩展](../develop/agent-development.md)。
 :::
 
-## Speech 与 Sandbox
+## Sandbox
 
-`aur.agent.speech` 的决策壳存在，但 TTS 没有被组合根启用，也没有 ToolExecutor 绑定。Sandbox 包同样不参与当前 Agent 运行时。
-
-这两部分的威胁模型、授权、资源限制、效果回执与产物回收文档正在编写中；不要把代码占位理解为可用能力。
+Sandbox 包不参与当前 Agent 运行时；其威胁模型、授权、资源限制、效果回执与产物回收文档正在编写中。不要把代码占位理解为可用能力。
