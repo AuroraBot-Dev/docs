@@ -28,6 +28,25 @@ AuroraBot 在启动时读取一次结构配置，校验后生成不可变 `Auror
 | `config/prompts.toml` | SOUL、WORLD 与 profile 提示词映射 |
 | `config/logging.toml` | 日志级别与目录 |
 | `config/storage.toml` | 各包私有数据目录 |
+| `config/extensions.toml` | 内建扩展的启用与贡献声明 |
+
+## 内建扩展
+
+`extensions.toml` 声明组合根装配哪些内建扩展：
+
+```toml
+[[extension]]
+id = "aurora.builtin.memory"
+version = "1.0"
+enabled = true
+factory = "aurora.builtin.memory"
+faces = ["control_action", "context_contributor", "effect_tool", "projector"]
+capabilities = ["aur.serv.memory.remember"]
+```
+
+`factory` 只能命中组合根内置注册表，不解析任意第三方模块字符串。声明中的 `faces` 与 `capabilities`
+必须和注册表 manifest 完全一致，不一致会在启动前失败。Panel 接管配置编辑前，请勿随意禁用被 Agent
+profile 或能力引用的扩展。
 
 ## Profile 选择顺序
 
