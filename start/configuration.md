@@ -28,6 +28,25 @@ AuroraBot 在启动时读取一次结构配置，校验后生成不可变 `Auror
 | `config/prompts.toml` | SOUL、WORLD 与 profile 提示词映射 |
 | `config/logging.toml` | 日志级别与目录 |
 | `config/storage.toml` | 各包私有数据目录 |
+| `config/extensions.toml` | 内建扩展的启用与贡献声明 |
+
+## 内建扩展
+
+`extensions.toml` 声明组合根装配哪些内建扩展：
+
+```toml
+[[extension]]
+id = "aurora.builtin.memory"
+version = "1.0"
+enabled = true
+factory = "aurora.builtin.memory"
+faces = ["control_action", "context_contributor", "effect_tool", "projector"]
+capabilities = ["aur.serv.memory.remember"]
+```
+
+`factory` 只能命中组合根内置注册表，不解析任意第三方模块字符串。声明中的 `faces` 与 `capabilities`
+必须和注册表 manifest 完全一致，不一致会在启动前失败。Panel 接管配置编辑前，请勿随意禁用被 Agent
+profile 或能力引用的扩展。
 
 ## Profile 选择顺序
 
@@ -85,10 +104,9 @@ max_children_per_agent = 4
 turn_concurrency = 8
 model_concurrency = 4
 tool_concurrency = 8
-blocking_workers = 4
 ```
 
-`root_profile` 是每个 Task 的入口 profile，nightly 固定使用 Triage 作为入口。`worker_profile` 是通用委派默认值。其余字段分别限制全局活跃 Agent、单 Task Agent 总数、树深、单 Agent children、turn/模型/工具并发和受控阻塞工作线程。
+`root_profile` 是每个 Task 的入口 profile，nightly 固定使用 Triage 作为入口。`worker_profile` 是通用委派默认值。其余字段分别限制全局活跃 Agent、单 Task Agent 总数、树深、单 Agent children、turn/模型/工具并发。
 
 ### Triage 与会话抢占
 

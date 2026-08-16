@@ -86,10 +86,16 @@ AuroraBot 是以因果事件、同构 Agent 和主动节律为核心的自主智
 - `apps.toml`：MCP 应用连接与启动描述；
 - `prompts.toml`：Prompt 文件映射；
 - `logging.toml`：日志级别与路径；
-- `storage.toml`：包级持久化路径。
+- `storage.toml`：包级持久化路径；
+- `extensions.toml`：内建扩展的启用与贡献声明。
 
-未知键必须在启动前失败。profile 只能覆盖 runtime；结构和启用状态不能由环境变量任意覆盖。密钥只从 TOML 显式
-命名的环境变量读取，`.env` 仅用于本地开发注入。
+未知键必须在启动前失败。`extensions.toml` 使用 `[[extension]]` 数组，每条只接受 `id`、`version`、`enabled`、
+`factory`、`faces` 与 `capabilities`；`factory` 必须命中组合根的显式内建注册表，`faces` 与 `capabilities` 必须
+与注册表提供的 manifest 完全一致，重复 id、未知 capability 或非法 face 在启动前失败。`engine.agents` 只接受
+`AgentLimits` 契约列出的键：`root_profile`、`worker_profile`、`max_active_agents`、`max_agents_per_task`、
+`max_depth`、`max_children_per_agent`、`turn_concurrency`、`model_concurrency`、`tool_concurrency`；未进入
+运行时的历史键不作为配置契约保留。profile 只能覆盖 runtime；结构和启用状态不能由环境变量任意覆盖。密钥只从
+TOML 显式命名的环境变量读取，`.env` 仅用于本地开发注入。
 
 ### 4.2 进程组合
 
@@ -198,7 +204,7 @@ engine 使用单进程 asyncio 独占模型：无数据库租约、无乐观锁�
 MemoryStore 是异步 Port。SQLite 操作、概要模型调用、embedding 与语义检索不得作为同步网络或阻塞 I/O 运行在 engine
 事件循环中；实现应使用原生异步接口或受控工作线程。handler 只接收已经固定的记忆快照，不感知异步实现。
 
-## 10. 工具与能力
+## 10. 工具、能力与扩展贡献模型
 
 能力 ID 使用稳定的 `aur.*` 域：
 
@@ -211,6 +217,40 @@ MemoryStore 是异步 Port。SQLite 操作、概要模型调用、embedding 与�
 
 工具结果统一构造 `tool.succeeded`、`tool.failed` 或 `tool.rejected` AMP 回执，包含请求标识、状态、规范化结果或错误。
 成功结果只保留一种规范表示：优先结构化内容，其次可解析 JSON 文本，最后纯文本。
+
+### 10.1 七个贡献端口
+
+扩展包由一个 `Manifest`、一个 `Lifecycle` 和若干贡献实现组成；组合根只通过贡献端口把实现挂到 engine 的固定检查点。
+不提供万能 plugin 接口，也不把内部编排暴露为 AMP。
+
+| 贡献端口 | 语义 | 强制边界 | 内建示例 |
+| --- | --- | --- | --- |
+| `InputGateway` | 把用户/操作输入归一化为 `RuntimeInput` 或 AMP | 只允许 `route_input` / `submit_conversation`，不得直接写运行态 | Console、Panel 聊天与操作、ops POST |
+| `EventSource` | 把环境变化归一化为 AMP 事实 | 事件必须带稳定幂等键；背压必须有界 | QQ 消息、Clock tick、MCP notification |
+| `ControlAction` | 纯粹产生 `AgentDecision`，不执行 I/O | 只能读取 `AgentContext` 并返回 `AgentDecision` | delegate、wait、triage 的 defer/discard |
+| `ContextContributor` | turn 前产生有界、只读、结构化上下文补丁 | 不能调用 Provider、写运行态或产生效果 | memory recall、附件/媒体解析结果 |
+| `EffectTool` | 生成持久化 Activity，由 `ToolExecutor` 执行并提交 `tool.*` 回执 | 参数只来自公开 schema；不可撤回效果按提交屏障规则处理 | MCP 工具、`memory.remember`、sandbox 执行 |
+| `OutputSink` | 只消费已提交的 `output_publications` 提交流 | 不能影响决策、不能撤回已提交输出 | QQ 回复、Console、Panel 输出流 |
+| `Projector` | 消费已提交因果事实，构造派生状态 | 只能产生派生状态/索引/指标，不得反向写热路径 | 终态记忆投影、费用统计、导出、审计 |
+
+`Manifest` 声明扩展 id、版本、贡献列表、信任域与 `EffectTool` 的授权策略附件。`Lifecycle`（mount、unmount、
+health、recover）只由组合根调用，不是 turn 级贡献。一个扩展包可以同时实现多个贡献。
+
+### 10.2 组合装配
+
+组合根通过 `CapabilityAssembly` 把 `extensions.toml` 声明的扩展解析为同一张装配结果：Agent handler 与
+`ControlAction`、`ContextContributor` 列表、`EffectTool` 绑定目录、`EventSource`、`OutputSink` 与 `Projector`。
+`factory` 只允许引用组合根显式注册的内建工厂，不解析任意第三方模块字符串。重复的扩展 id、capability、face
+声明与 manifest 不一致、或绑定冲突在启动前失败。
+
+0.x 阶段进程内贡献只允许官方内建扩展；第三方扩展只能以 MCP/AMP 的外部形态参与，不开放进程内 hook。无论信任域
+如何，全部贡献都经过同一套授权、预算、幂等、回执与因果记录规则。
+
+### 10.3 能力可见性事件
+
+能力生命周期使用保留事件族 `capability.registered`、`capability.unavailable`、`capability.health_changed`。
+这些事件由组合根或平台通过 `submit_amp` 提交，携带稳定幂等键，只供外部观察、`OutputSink` 与 `Projector` 使用；
+它们不承载能力间的内部编排，也不替代因果事件或工具回执。
 
 ## 11. 模型网关
 
@@ -234,7 +274,8 @@ endpoint 与角色语义归代码。模型能力以 models.dev 为主要信息�
 ## 12. 记忆引擎
 
 记忆由一个 `MemoryStore` 同源承载，被动终态投影和主动 memory Agent 写入同一存储。模型调用前取得不可变快照，handler
-不能直接访问记忆实现。
+不能直接访问记忆实现。在贡献模型中，Memory 是 `ContextContributor`（recall）+ `EffectTool`（remember）+
+`Projector`（终态投影）的组合扩展，可选附带 memory Agent profile。
 
 memory 包内部保持三类职责分离：`models.py` 只声明持久化数据形状，`short_term.py` 负责窗口、概要与预算算法，
 `long_term.py` 负责语义适配，`service.py` 只编排异步 Port、durable facts 与降级策略。数据模型不得反向依赖 service。
@@ -263,6 +304,8 @@ memory 包内硬编码 Provider、模型或密钥。语义检索无结果或失�
 ## 13. Platform、MCP 与应用
 
 Platform 将外部生态归一化为 AMP，并执行获权效果。当前平台注册表只包含 MCP；Console 和 Panel 不是 Platform。
+在贡献模型中，Platform 是 `Lifecycle + EventSource + EffectTool + OutputSink` 的组合适配器，由组合根按
+`PlatformHandle` 装配。
 
 MCP 支持本地 stdio 和 HTTPS Streamable HTTP：
 
@@ -279,7 +322,8 @@ Task 预算约束。
 ## 14. Console、ops 与 Panel
 
 Console 是本地交互和渲染器，位于热路径外；它通过统一输入端口提交对话或操作，通过 output stream 渲染模型文本和
-错误，不是外部效果能力。
+错误，不是外部效果能力。Console 与 Panel 分别实现 `InputGateway + OutputSink`；ops 的查询、导出与统计是
+`Projector`，不进入热路径。
 
 ops 是唯一后端路由和检查 sidecar。RESTful 资源树是操作语义的唯一真源，斜杠命令是同一 OperationSpec 的文本形式；
 两者共享参数模型、handler 和 `OperationResult` envelope。
@@ -348,10 +392,12 @@ SQLAlchemy 2.0 ORM；原始 sqlite3 连接只作为迁移、诊断或测试逃�
 1. 单一组合根和单一 engine owner；
 2. 包依赖测试无违规；
 3. AMP、Task、Activity 和 Tool receipt 的幂等及恢复测试通过；
-4. Agent handler 保持纯决策边界；
+4. Agent handler 与贡献端口保持纯边界：`ControlAction` 只返回决策，`ContextContributor` / `OutputSink` /
+   `Projector` 只读，`EffectTool` 只经回执产生效果；
 5. 模型上下文、批次、队列和预算具有硬上界；
 6. 数据库迁移可从支持的历史版本连续升级并可回滚失败事务；
 7. Panel 认证、Origin、附件和 WebSocket 测试完整；
 8. Console、Panel 与会话导出对同一因果和输出源保持一致；
 9. 长期记忆的语义召回、降级和字符预算可端到端验证；
-10. 干净克隆可以按默认文档完成可预测启动，未安装的外部扩展不会成为隐式必需项。
+10. 干净克隆可以按默认文档完成可预测启动，未安装的外部扩展不会成为隐式必需项；
+11. 扩展 manifest 与七类贡献端口的装配、重复检测和边界约束有回归测试。

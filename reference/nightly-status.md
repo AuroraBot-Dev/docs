@@ -50,8 +50,9 @@ order: 10
 | 能力精确/前缀/全通配/排除 | 已实现 | 排除优先 |
 | SOUL/WORLD/Profile 分层 | 已实现 | Prompt 不是授权边界 |
 | 源码 `module:attribute` handler | 受限 | 只适合主仓库或可导入源码 |
+| 扩展贡献模型 | 已实现 | 七端口 + Manifest/Lifecycle + CapabilityAssembly |
+| `capability.*` 可见性事件 | 已实现 | 只写因果事件，不进 Inbox；registered 已由 MCP 发出 |
 | 第三方 Agent 包与热加载 | 文档正在编写中 | 无安装、版本和状态迁移规范 |
-| Speech | 文档正在编写中 | 决策壳存在，TTS 未启用、无执行绑定 |
 | Sandbox | 文档正在编写中 | 包存在但不参与 Agent 运行时 |
 
 ## AI

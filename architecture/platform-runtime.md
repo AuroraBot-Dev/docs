@@ -32,7 +32,7 @@ sequenceDiagram
     S-->>P: Tool schemas
     P->>P: 构建 capability catalog
     P->>S: 若 Clock 存在，调用 start_heartbeat
-    P-->>A: PlatformHandle + ToolExecutor bindings
+    P-->>A: PlatformHandle + EffectTool bindings
     A->>E: bind_tool_executors
 ```
 
@@ -172,10 +172,12 @@ Platform 使用 package、事件类型、session 与幂等键确定性生成 AMP
 
 组合根拥有 PlatformHandle：
 
-- `bindings`：工具执行目录；
-- `background`：连接监视；
+- `effect_tools`：EffectTool 绑定目录；
+- `event_sources`：EventSource 连接监视与通知归一化；
 - `cleanup`：有界关闭回调；
 - `server`：若平台自身提供长驻服务。
+
+能力发现完成后，MCP 为每个能力提交 `capability.registered` 保留事件；该事件只写因果事件，不进入 Inbox 或 Triage。
 
 stdio 子进程逆序关闭；HTTP session、后台通知任务与本地 client 统一回收。任一已建立连接意外结束会传播错误并请求整个 AuroraBot 进程停止。
 

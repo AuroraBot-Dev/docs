@@ -134,14 +134,18 @@ SOUL、WORLD 和 profile Prompt 决定人格、表达和角色说明。它们不
 
 ## Agent 扩展现状
 
-可以在源码可导入路径中实现 `BaseAgent` 子类，并通过 `implementation = "module:Class"` 配置。组合根会注入 PromptComposer 与内建 Capability。
+可以在源码可导入路径中实现 `BaseAgent` 子类，并通过 `implementation = "module:Class"` 配置。组合根会注入 PromptComposer 与 manifest 声明的 `ControlAction` 贡献。
 
 ::: warning 文档正在编写中
 第三方 Agent 的独立打包、安装、自动发现、版本兼容、热加载、签名与分发规范尚未定义。当前支持的是显式源码导入与 TOML profile，不是稳定插件 ABI。详见[Agent 扩展](../develop/agent-development.md)。
 :::
 
-## Speech 与 Sandbox
+## 扩展贡献模型
 
-`aur.agent.speech` 的决策壳存在，但 TTS 没有被组合根启用，也没有 ToolExecutor 绑定。Sandbox 包同样不参与当前 Agent 运行时。
+扩展由 `Manifest + Lifecycle + 若干贡献` 组成，组合根经 `CapabilityAssembly` 挂到 engine 固定检查点。七类贡献为
+`InputGateway`、`EventSource`、`ControlAction`、`ContextContributor`、`EffectTool`、`OutputSink`、`Projector`；
+0.x 阶段进程内贡献只允许官方内建扩展，第三方仍以 MCP/AMP 外部形态参与。完整契约见唯一 RFC 的工具与能力章节。
 
-这两部分的威胁模型、授权、资源限制、效果回执与产物回收文档正在编写中；不要把代码占位理解为可用能力。
+## Sandbox
+
+Sandbox 包不参与当前 Agent 运行时；其威胁模型、授权、资源限制、效果回执与产物回收文档正在编写中。不要把代码占位理解为可用能力。

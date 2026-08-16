@@ -83,7 +83,7 @@ AuroraBot 仍处于 0.5 alpha：
 - Panel 只允许 loopback、单 owner，不是公网多租户安全边界；
 - 默认配置仍启用了仓库外 Aurora-QQ，干净克隆需要手动关闭或另行安装；
 - 附件可以存储和传递引用，但尚未进入完整多模态理解链路；
-- Sandbox 与 Speech 没有进入获权运行时；
+- Sandbox 没有进入获权运行时；
 - 终态 TTL、WAL checkpoint、统一备份/恢复和长期 soak test 尚未闭环；
 - MCP 断线当前会让组合根停止，自动重连契约仍在编写；
 - 第三方插件市场、自动发现、热加载与稳定兼容范围尚未定义。

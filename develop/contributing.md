@@ -114,4 +114,4 @@ npm run docs:build
 
 ## 当前阶段
 
-0.5 alpha 已完成统一 Engine 主体，但长期运维、真实 MCP 故障注入、附件多模态、Sandbox、Speech 和稳定第三方分发仍未闭环。扩展新能力前，优先关闭 [Nightly 状态](../reference/nightly-status.md) 中已登记的正确性与交付缺口。
+0.5 alpha 已完成统一 Engine 主体，但长期运维、真实 MCP 故障注入、附件多模态、Sandbox 和稳定第三方分发仍未闭环。扩展新能力前，优先关闭 [Nightly 状态](../reference/nightly-status.md) 中已登记的正确性与交付缺口。
