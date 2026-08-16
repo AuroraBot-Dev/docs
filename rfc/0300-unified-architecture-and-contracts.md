@@ -86,12 +86,16 @@ AuroraBot 是以因果事件、同构 Agent 和主动节律为核心的自主智
 - `apps.toml`：MCP 应用连接与启动描述；
 - `prompts.toml`：Prompt 文件映射；
 - `logging.toml`：日志级别与路径；
-- `storage.toml`：包级持久化路径。
+- `storage.toml`：包级持久化路径；
+- `extensions.toml`：内建扩展的启用与贡献声明。
 
-未知键必须在启动前失败。`engine.agents` 只接受 `AgentLimits` 契约列出的键：`root_profile`、`worker_profile`、
-`max_active_agents`、`max_agents_per_task`、`max_depth`、`max_children_per_agent`、`turn_concurrency`、
-`model_concurrency`、`tool_concurrency`；未进入运行时的历史键不作为配置契约保留。profile 只能覆盖 runtime；结构
-和启用状态不能由环境变量任意覆盖。密钥只从 TOML 显式命名的环境变量读取，`.env` 仅用于本地开发注入。
+未知键必须在启动前失败。`extensions.toml` 使用 `[[extension]]` 数组，每条只接受 `id`、`version`、`enabled`、
+`factory`、`faces` 与 `capabilities`；`factory` 必须命中组合根的显式内建注册表，`faces` 与 `capabilities` 必须
+与注册表提供的 manifest 完全一致，重复 id、未知 capability 或非法 face 在启动前失败。`engine.agents` 只接受
+`AgentLimits` 契约列出的键：`root_profile`、`worker_profile`、`max_active_agents`、`max_agents_per_task`、
+`max_depth`、`max_children_per_agent`、`turn_concurrency`、`model_concurrency`、`tool_concurrency`；未进入
+运行时的历史键不作为配置契约保留。profile 只能覆盖 runtime；结构和启用状态不能由环境变量任意覆盖。密钥只从
+TOML 显式命名的环境变量读取，`.env` 仅用于本地开发注入。
 
 ### 4.2 进程组合
 
@@ -234,9 +238,10 @@ health、recover）只由组合根调用，不是 turn 级贡献。一个扩展�
 
 ### 10.2 组合装配
 
-组合根通过 `CapabilityAssembly` 把 TOML 声明的扩展解析为同一张装配结果：Agent handler 与 `ControlAction`、
-`ContextContributor` 列表、`EffectTool` 绑定目录、`EventSource`、`OutputSink` 与 `Projector`。重复的能力 ID、
-manifest 或绑定在启动前失败。
+组合根通过 `CapabilityAssembly` 把 `extensions.toml` 声明的扩展解析为同一张装配结果：Agent handler 与
+`ControlAction`、`ContextContributor` 列表、`EffectTool` 绑定目录、`EventSource`、`OutputSink` 与 `Projector`。
+`factory` 只允许引用组合根显式注册的内建工厂，不解析任意第三方模块字符串。重复的扩展 id、capability、face
+声明与 manifest 不一致、或绑定冲突在启动前失败。
 
 0.x 阶段进程内贡献只允许官方内建扩展；第三方扩展只能以 MCP/AMP 的外部形态参与，不开放进程内 hook。无论信任域
 如何，全部贡献都经过同一套授权、预算、幂等、回执与因果记录规则。
