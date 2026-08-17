@@ -78,10 +78,11 @@ flowchart LR
 
 ## 当前不承诺什么
 
-AuroraBot 仍处于 0.5 alpha：
+AuroraBot 仍处于 0.6 alpha：
 
 - Panel 只允许 loopback、单 owner，不是公网多租户安全边界；
 - 默认配置仍启用了仓库外 Aurora-QQ，干净克隆需要手动关闭或另行安装；
+- 七端口贡献已经进入公共 contracts，但统一 Lifecycle 与单一装配快照尚未闭环；
 - 附件可以存储和传递引用，但尚未进入完整多模态理解链路；
 - Sandbox 没有进入获权运行时；
 - 终态 TTL、WAL checkpoint、统一备份/恢复和长期 soak test 尚未闭环；

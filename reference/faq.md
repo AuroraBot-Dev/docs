@@ -16,7 +16,7 @@ git clone --branch nightly --single-branch https://github.com/AuroraBot-Dev/Auro
 
 ## 支持哪些 Python 和操作系统？
 
-主项目声明 Python `>=3.12,<3.15`，推荐 3.12。代码包含 Windows 与 POSIX 的信号、路径和子进程处理，但 0.5 alpha 尚未给出所有系统/版本组合的稳定交付矩阵。
+主项目声明 Python `>=3.12,<3.15`，推荐 3.12。代码包含 Windows 与 POSIX 的信号、路径和子进程处理，但 0.6 alpha 尚未给出所有系统/版本组合的稳定交付矩阵。
 
 遇到平台差异时优先使用 Python 3.12、最新 uv 和本地 loopback 部署，并运行 `uv run aurora check`。
 
@@ -116,7 +116,7 @@ nightly 只完成文件存储、索引和稳定引用传递。MIME 校验、内�
 
 ## 有 Docker 或无人值守生产部署吗？
 
-核心仓库当前推荐源码 + uv。Panel 仓库有前端构建/容器资产，但 AuroraBot 0.5 alpha 尚未发布完整的核心容器、备份、恢复、TTL、soak 和公网运维契约。
+核心仓库当前推荐源码 + uv。Panel 仓库有前端构建/容器资产，但 AuroraBot 0.6 alpha 尚未发布完整的核心容器、备份、恢复、TTL、soak 和公网运维契约。
 
 部署文档正在编写中。
 

@@ -4,7 +4,7 @@ order: 11
 
 # 快速开始
 
-本页从一个干净目录启动 `nightly@97a5bdb`。当前推荐源码运行。
+本页从一个干净目录启动 `nightly@9c9e215`。当前推荐源码运行。
 
 ## 环境要求
 
@@ -31,7 +31,7 @@ git branch --show-current
 git describe --tags --always
 ```
 
-第一条应输出 `nightly`。本文对齐的描述为 `v0.5.0-alpha.5-10-g97a5bdb`；分支继续前进后提交号可能不同。
+第一条应输出 `nightly`。本文对齐的描述为 `v0.6.0-alpha.5`；分支继续前进后提交号可能不同。
 
 ## 2. 安装依赖
 
@@ -69,7 +69,7 @@ DEEPSEEK_API_KEY=你的密钥
 
 ## 4. 处理默认 Aurora-QQ 条目
 
-当前 nightly 的 `config/apps.toml` 默认启用了仓库外的 Aurora-QQ 扩展。这是已登记的 0.5 alpha 交付缺口；干净克隆若没有该扩展，MCP 启动会失败。
+当前 nightly 的 `config/apps.toml` 默认启用了仓库外的 Aurora-QQ 扩展。这是已登记的 0.6 alpha 交付缺口；干净克隆若没有该扩展，MCP 启动会失败。
 
 首次体验时，请把对应条目改成：
 

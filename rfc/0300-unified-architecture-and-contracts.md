@@ -6,7 +6,7 @@ order: 10
 # 0300：AuroraBot 统一架构与公共契约
 
 状态：已接受
-日期：2026-08-09
+日期：2026-08-17
 取代：此前全部 02xx 设计文件
 
 ## 1. 文档地位
@@ -215,7 +215,7 @@ MemoryStore 是异步 Port。SQLite 操作、概要模型调用、embedding 与�
 所有执行效果实现统一的 `ToolExecutor`，由组合根收集为扁平绑定目录并注入 engine。工具参数只来自能力公开 schema；
 运行时不能向任意外部 schema 注入隐藏参数。只有能力显式声明 `runtime_completion` 时，才允许公开完成 Task 的参数。
 
-工具结果统一构造 `tool.succeeded`、`tool.failed` 或 `tool.rejected` AMP 回执，包含请求标识、状态、规范化结果或错误。
+工具结果统一构造 `tool.succeeded`、`tool.failed` 或 `tool.unknown` AMP 回执，包含请求标识、状态、规范化结果或错误。
 成功结果只保留一种规范表示：优先结构化内容，其次可解析 JSON 文本，最后纯文本。
 
 ### 10.1 七个贡献端口

@@ -13,8 +13,8 @@
 </p>
 
 本文档站面向 AuroraBot `nightly` 分支，当前对齐
-[`97a5bdb`](https://github.com/AuroraBot-Dev/AuroraBot/commit/97a5bdb69d02b4faa8eb8ecd6a236fb85c129567)
-（0.5.0 alpha 开发线）。它只描述现行实现；旧 Kernel、Brain、Node 与文件投递箱架构已经移除。
+[`9c9e215`](https://github.com/AuroraBot-Dev/AuroraBot/commit/9c9e215e10ac5f5b6c0ea9551d3c65bad8fb26bd)
+（0.6.0 alpha 开发线）。它只描述现行实现；旧 Kernel、Brain、Node 与文件投递箱架构已经移除。
 
 ## 阅读入口
 

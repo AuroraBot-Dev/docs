@@ -142,9 +142,10 @@ SOUL、WORLD 和 profile Prompt 决定人格、表达和角色说明。它们不
 
 ## 扩展贡献模型
 
-扩展由 `Manifest + Lifecycle + 若干贡献` 组成，组合根经 `CapabilityAssembly` 挂到 engine 固定检查点。七类贡献为
-`InputGateway`、`EventSource`、`ControlAction`、`ContextContributor`、`EffectTool`、`OutputSink`、`Projector`；
-0.x 阶段进程内贡献只允许官方内建扩展，第三方仍以 MCP/AMP 外部形态参与。完整契约见唯一 RFC 的工具与能力章节。
+目标契约中，扩展由 `Manifest + Lifecycle + 若干贡献` 组成。七类贡献为 `InputGateway`、`EventSource`、
+`ControlAction`、`ContextContributor`、`EffectTool`、`OutputSink`、`Projector`。现行 `CapabilityAssembly` 已统一内建
+control/memory 的四类贡献；其他贡献与平台生命周期仍由组合根既有路径装配，统一 Lifecycle 和七面快照尚在收口。
+0.x 阶段进程内贡献只允许官方内建扩展，第三方仍以 MCP/AMP 外部形态参与。完整目标契约见唯一 RFC 的工具与能力章节。
 
 ## Sandbox
 

@@ -10,11 +10,12 @@ order: 10
 
 | 项目 | 分支 / 提交 | 日期 |
 | --- | --- | --- |
-| AuroraBot 核心 | `nightly@97a5bdb69d02` | 2026-08-09 |
-| AuroraBot Panel | `main@823fa73361e6` | 2026-08-12 |
-| 文档盘点 | 本次重构 | 2026-08-12 |
+| AuroraBot 核心 | `nightly@9c9e215e10ac` | 2026-08-17 |
+| AuroraBot Panel | `main@29e1ae8d6cd6` | 2026-08-17 |
+| 文档盘点 | RFC / contracts / 实现 / 测试复核 | 2026-08-17 |
 
-核心版本为 `0.5.0`，Git 描述 `v0.5.0-alpha.5-10-g97a5bdb`。nightly 会继续前进；若提交晚于本基线，以最新 RFC、contracts 与测试为准。
+核心版本为 `0.6.0`，Git 描述 `v0.6.0-alpha.5`。本基线的 `uv run aurora check` 为 242 tests / 84.43% coverage；
+nightly 会继续前进，若提交晚于本基线，以最新 RFC、contracts 与测试为准。
 
 ## 状态定义
 
@@ -50,8 +51,8 @@ order: 10
 | 能力精确/前缀/全通配/排除 | 已实现 | 排除优先 |
 | SOUL/WORLD/Profile 分层 | 已实现 | Prompt 不是授权边界 |
 | 源码 `module:attribute` handler | 受限 | 只适合主仓库或可导入源码 |
-| 扩展贡献模型 | 已实现 | 七端口 + Manifest/Lifecycle + CapabilityAssembly |
-| `capability.*` 可见性事件 | 已实现 | 只写因果事件，不进 Inbox；registered 已由 MCP 发出 |
+| 扩展贡献模型 | 受限 | 七端口与内建四面装配已落地；统一 Lifecycle 与七面单一装配快照待闭环 |
+| `capability.*` 可见性事件 | 受限 | 只写因果事件、不进 Inbox；registered 已发出，unavailable/health_changed 待闭环 |
 | 第三方 Agent 包与热加载 | 文档正在编写中 | 无安装、版本和状态迁移规范 |
 | Sandbox | 文档正在编写中 | 包存在但不参与 Agent 运行时 |
 
@@ -126,14 +127,15 @@ order: 10
 | 数据路径沙箱与重叠校验 | 已实现 | `storage.toml` |
 | 一致备份与恢复 | 文档正在编写中 | 无公共操作和兼容承诺 |
 | 数据保留与墓碑 | 文档正在编写中 | 清理后幂等语义未闭环 |
-| 生产 soak / 性能基线 | 文档正在编写中 | 0.5 alpha 不承诺无人值守长期运行 |
+| 生产 soak / 性能基线 | 文档正在编写中 | 0.6 alpha 不承诺无人值守长期运行 |
 
 ## 已知交付缺口
 
-首次使用最重要的三个事实：
+首次使用最重要的四个事实：
 
 1. `config/apps.toml` 默认启用仓库外 Aurora-QQ；没有安装时请先设为 `enabled = false`。
 2. Panel 后端不托管完整 Web 前端；前端来自独立 `panel` 仓库。
 3. `/status` 不是 nightly 命令；使用 `/engine/status`。
+4. 七端口 contracts 已可用于架构协作，但当前不是稳定的第三方进程内插件 ABI。
 
 这些差异已经在[快速开始](../start/getting-started.md)中给出可复现处理方式。
