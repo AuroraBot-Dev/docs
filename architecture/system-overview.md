@@ -5,7 +5,7 @@ order: 1
 # 系统总览
 
 ```text
-config/{runtime,engine,prompt}.toml
+config/**/*.toml + config/prompts/**/*.md
   → configuration 同名模块注册
   → AuroraConfig
   → composition/{prompt,engine}.py 注册实例

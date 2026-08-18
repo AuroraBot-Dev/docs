@@ -170,7 +170,8 @@ Provider。`src` 不导入 `aurora`。
 
 `aurora` 虽不属于认知核心，仍保留以下必要的增长边界：
 
-- `aurora.commands`：每个 CLI 命令一个模块，由命令目录统一注册；命令实现不进入 `main.py`；
+- `aurora.commands`：每个 CLI 命令一个模块，由命令目录统一注册；命令实现不进入 `main.py`；`config list` 与
+  `config show <name>` 只读取注册目录和源文件，不修改配置；
 - `aurora.configuration`：每个 TOML 文件对应一个同名 Python 模块；模块定义自己的纯配置值、解析器和注册函数；
 - `aurora.composition`：每个需要项目实例的 `src` 子包对应一个同名 Python 模块；模块声明自己需要的实例并注册构造结果；
 - `aurora.config`：按配置目录的显式注册顺序加载全部 TOML，并合并为一个只读 `AuroraConfig`；
@@ -185,9 +186,13 @@ Provider。`src` 不导入 `aurora`。
 
 ## 10. 配置与存储
 
-核心值对象可直接由 Python 构造。项目配置按职责拆成 `runtime.toml`、`engine.toml` 和 `prompt.toml`，分别包含 root 节点入口、
-运行上界和提示词目录。每个文件只由同名 configuration 模块解析；通用加载器不包含文件名、字段名或具体配置类型分支。
-新增结构配置时，增加一个 TOML、一个同名 configuration 模块和一条注册记录。密钥只来自环境变量。
+核心值对象可直接由 Python 构造。项目配置按职责拆成 `runtime.toml`、`engine.toml`、`agents.toml`、`models.toml`、
+`prompts.toml`、`apps.toml`、`platforms.toml`、`extensions.toml`、`logging.toml` 和 `storage.toml`；环境 profile 位于
+`profiles/<name>.toml`，提示词正文位于 `prompts/`。`runtime.tree`、`engine.tree` 和 `prompts.toml` 是当前 AgentTree
+组合直接消费的配置，其余配置作为已注册的只读项目事实进入 `AuroraConfig`，直到对应运行包出现真实用例。
+
+每个 TOML 只由同相对路径的 configuration 模块解析；通用加载器不包含文件名、字段名或具体配置类型分支。新增结构配置时，
+增加一个 TOML、一个同路径 configuration 模块和一条注册记录。密钥只来自环境变量。
 
 当前不定义运行时数据库、schema 版本、迁移、会话归档、费用库、记忆库或面板存储。需要持久化时，先以完整
 AgentTree 的显式导入/导出适配器验证，不把存储细节加入节点契约。
