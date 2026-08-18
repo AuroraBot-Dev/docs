@@ -1,16 +1,6 @@
-# AuroraBot Docs
+# AuroraBot Documentation
 
-AuroraBot の公開ドキュメントです。AuroraBot は、因果イベント、同型 Agent、能動的なリズムを中心に設計された自律エージェントフレームワークです。
+この repository は AuroraBot documentation site と唯一の RFC を管理します。現在は AgentTree の最小コア、四 role
+message、node ごとの model/tool 選択、委任、project composition root を説明します。
 
-このサイトは `nightly` ブランチを追跡し、現在は AuroraBot 0.6.0 alpha の
-[`9c9e215`](https://github.com/AuroraBot-Dev/AuroraBot/commit/9c9e215e10ac5f5b6c0ea9551d3c65bad8fb26bd)
-に対応しています。旧 Kernel / Brain / Node / ファイル Inbox の文書は現行ドキュメントから削除されました。
-
-本文は現在、中国語を優先して整備しています。ローカルでの起動方法：
-
-```bash
-npm ci
-npm run docs:dev
-```
-
-公開サイト：[aurorabot.org](https://www.aurorabot.org/)
+`npm install` の後、`npm run docs:dev` または `npm run docs:build` を実行してください。

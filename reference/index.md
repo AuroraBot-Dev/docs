@@ -4,7 +4,6 @@ order: 4
 
 # 参考
 
-当前只有一份公开状态页与一份常见问题：
-
-- [Nightly 实现状态](./nightly-status.md)：当前实现的边界与未承诺事项。
-- [常见问题](./faq.md)：部署与使用中的高频疑问。
+- [当前实现状态](./nightly-status.md)；
+- [常见问题](./faq.md)；
+- [唯一 RFC](../rfc/0300-unified-architecture-and-contracts.md)。

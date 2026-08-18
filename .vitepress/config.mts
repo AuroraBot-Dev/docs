@@ -7,7 +7,7 @@ export default withSidebar(
     defineConfig({
       lang: "zh-CN",
       title: "AuroraBot 文档站",
-      description: "AuroraBot — 以因果事件、同构 Agent 和主动节律为核心的自主智能体框架",
+      description: "AuroraBot — 以 AgentTree 探索自主智能体最小循环",
       base: "/",
       cleanUrls: true,
       lastUpdated: true,
@@ -57,7 +57,7 @@ export default withSidebar(
           { text: "首页", link: "/" },
           { text: "开始", link: "/start/getting-started" },
           { text: "架构", link: "/architecture/system-overview" },
-          { text: "开发", link: "/develop/app-development" },
+          { text: "开发", link: "/develop/agent-development" },
           { text: "Nightly 状态", link: "/reference/nightly-status" },
         ],
         search: {
