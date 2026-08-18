@@ -24,5 +24,8 @@ cp -r config.example config
 
 `aurora config list` 列出注册名称与源文件，`aurora config show <name>` 原样显示一份 TOML。当前命令只读。
 
-model 必须显式写入节点和 ModelRequest。profile 只决定提示词，不决定模型。child 由 delegate call 显式指定 profile、model、
-tools 和 instruction。
+`models.roles` 的键是 model endpoint id，必须显式写入节点和 ModelRequest。endpoint 固定映射 provider/model；profile 只决定
+提示词，不决定模型。child 由 delegate call 显式指定 profile、model、tools 和 instruction。`litellm` 与
+`openai_compatible` provider 都通过 LiteLLM 模型网关调用，密钥只读取 `secret_env` 指定的环境变量。
+
+`runtime.console.enabled` 决定 `aurora start` 默认是否启动本地终端；命令行 `--headless` 可以在单次启动中禁用终端。

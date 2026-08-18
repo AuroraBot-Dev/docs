@@ -4,9 +4,10 @@ order: 2
 
 # 常见问题
 
-## 为什么 `aurora start` 不存在？
+## `aurora start` 如何选择模型？
 
-当前仓库不绑定具体联网 Model。项目保留组合根，但由应用调用 `assemble_runtime()` 注入 Model 与 Tools。
+root 和 child 显式保存 `models.roles` 中的 endpoint id；LiteLLM 网关把 endpoint 固定映射到 provider/model，不从 profile
+推导。测试和嵌入应用仍可调用 `assemble_runtime()` 注入 Model 与 Tools。
 
 ## `message` 为什么不是 `user`？
 

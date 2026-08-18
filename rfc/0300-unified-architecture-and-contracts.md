@@ -18,8 +18,8 @@ order: 10
 
 ## 2. 当前范围
 
-AuroraBot 是以 AgentTree 为运行聚合根的自主智能体框架。当前实现包含完整最小循环和项目级配置、组合与命令入口，
-不包含部署、故障恢复、运维面板或第三方扩展生态。
+AuroraBot 是以 AgentTree 为运行聚合根的自主智能体框架。当前实现包含完整最小循环、项目级配置与组合、统一操作目录、
+本地 Console 和进程启动入口，不包含部署、故障恢复、运维面板或第三方扩展生态。
 
 最小循环只有五个基本概念：
 
@@ -148,8 +148,12 @@ AgentTree。
 - `Model.complete(request) -> AssistantMessage`，其中 request 显式携带 node 的 model id；
 - `Tool.execute(call) -> ToolMessage`。
 
-Provider、MCP、Console、定时器和未来平台都是这两个端口之外的适配器或 message 来源。首版不定义 InputGateway、
+Provider、Console、MCP、定时器和未来平台都是这两个端口之外的适配器或 message 来源。首版不定义 InputGateway、
 EventSource、ControlAction、ContextContributor、OutputSink、Projector、Manifest 或 Lifecycle 公共体系。
+
+Console 是只依赖可注入文本分派端口的本地终端前端：普通文本由组合根映射为“启动新 AgentTree”，斜杠文本交给 ops 的
+统一目录；它不导入 ops、aurora 或 engine，不保存 AgentTree，也不拥有 Tool。终端只负责异步读行、历史、中文渲染、清屏和
+停止协调。进程退出是 ops 的显式操作，Console 仅执行操作结果携带的终端控制语义。
 
 delegate 是唯一内建 Tool，由 engine 解释为树操作，不交给外部 Tool executor。除此以外，engine 不按工具名称理解业务语义。
 
@@ -159,14 +163,16 @@ delegate 是唯一内建 Tool，由 engine 解释为树操作，不交给外部 
 
 | 包 | 职责 | 可依赖 |
 | --- | --- | --- |
+| `src/utils` | 无项目语义的日志、时间、文本与序列化工具 | 标准库 |
 | `src/contracts` | Chat、Tool、Model 与 AgentTree 不可变值对象和端口 | 标准库 |
 | `src/prompt` | 四角色 PromptAssembler | contracts |
 | `src/engine` | AgentTree 的确定性最小循环 | contracts、prompt |
-| `src/ai` | 可选 Provider adapter | contracts |
+| `src/ai` | LiteLLM 模型网关与 OpenAI-compatible 协议映射 | contracts、litellm |
+| `src/console` | 本地异步终端与终端控制 DTO | 标准库、prompt-toolkit |
 | `ops` | 热路径外的操作资源树、运行监测与显式改动入口 | 标准库、tomlkit |
 | `aurora` | 项目配置、分阶段组合根、项目 runtime 与 CLI | 所有下层包 |
 
-依赖方向固定为 `contracts ← prompt/ai ← engine ← aurora`，`ops ← aurora`；ops 与 src 互不导入。核心不依赖配置加载器、
+依赖方向固定为 `utils/contracts ← prompt/ai ← engine ← aurora`，`console ← aurora`，`ops ← aurora`；ops 与 src 互不导入。核心不依赖配置加载器、
 数据库、Web 框架、MCP SDK 或具体 Provider。`src` 不导入 `aurora` 或 `ops`。
 
 `ops` 保留统一操作体系的标准设计：一个 `OperationSpec` 同时描述 method/path 资源入口和斜杠文本入口，参数只解析一次，
@@ -182,6 +188,10 @@ delegate 是唯一内建 Tool，由 engine 解释为树操作，不交给外部 
 当前 ops 是适配器中立的核心，不包含 HTTP 服务、Panel 认证、附件、WebSocket、数据库或前端 Lab；这些都是以后消费同一
 OperationSpec 目录的独立适配器，不得反向侵入操作处理器。
 
+`src.utils` 只保留没有上层包依赖的通用实现。当前不包含 SQLAlchemy migration、uvicorn server 包装或其他已移除子系统的
+辅助代码。项目配置加载、子进程命令等组合层工具仍属于
+`aurora.utils`，不得下沉后让 `src` 反向理解项目目录。
+
 `aurora` 虽不属于认知核心，仍保留以下必要的增长边界：
 
 - `aurora.commands`：每个 CLI 命令一个模块，由命令目录统一注册；命令实现不进入 `main.py`；`config list` 与
@@ -191,6 +201,8 @@ OperationSpec 目录的独立适配器，不得反向侵入操作处理器。
 - `aurora.config`：按配置目录的显式注册顺序加载全部 TOML，并合并为一个只读 `AuroraConfig`；
 - `aurora.composer`：为分阶段组合提供类型化实例键、构造上下文和只读结果，不知道具体 `src` 子包；
 - `aurora.runtime`：调用全部组件注册函数，并从组合结果取得最终 runner 和项目入口配置。
+- `aurora start`：加载个人配置，从已注册模型端点构造 Model，组合一个 AuroraRuntime，并统一管理 Console、停止事件和
+  SIGINT/SIGTERM；`--headless` 只禁用 Console。当前没有 Platform，因此不接受或伪装平台选择参数；
 - `aurora.utils`：只保存无项目语义的功能工具，例如子进程执行与 TOML 字段读取。
 
 命令、配置和组合使用同一种扩展成本：新增一个并列模块，并在对应目录入口增加一条显式注册记录。中心加载器、
@@ -206,7 +218,14 @@ OperationSpec 目录的独立适配器，不得反向侵入操作处理器。
 项目配置按职责拆成 `runtime.toml`、`engine.toml`、`agents.toml`、`models.toml`、
 `prompts.toml`、`apps.toml`、`platforms.toml`、`extensions.toml`、`logging.toml` 和 `storage.toml`；环境 profile 位于
 `profiles/<name>.toml`，提示词正文位于 `prompts/`。`runtime.tree`、`engine.tree` 和 `prompts.toml` 是当前 AgentTree
-组合直接消费的配置，其余配置作为已注册的只读项目事实进入 `AuroraConfig`，直到对应运行包出现真实用例。
+组合直接消费的配置；`runtime.console` 决定默认是否启动本地终端，`models.toml` 为 start 提供模型端点。其余配置作为已注册的
+只读项目事实进入 `AuroraConfig`，直到对应运行包出现真实用例。
+
+`models.toml` 的角色键是节点显式保存和 `ModelRequest` 显式携带的 model endpoint id；每个 endpoint 固定指向一个 provider
+和协议 model 名称。Provider 不从 profile 推导 endpoint。密钥字段只声明环境变量名，真实密钥只在调用时从环境变量读取。
+当前模型效果统一经过 LiteLLM 网关：`litellm` adapter 使用显式 `provider/model`，`openai_compatible` adapter 使用
+`openai/model + api_base`。两者共用 Chat Completions 消息与 Tool 映射，不建立绕过网关的直连客户端；其他 adapter 启动即
+失败，不进行隐式兼容猜测。
 
 模板与个人目录保持相同拓扑。每个 TOML 只由同相对路径的 configuration 模块解析；通用加载器不包含文件名、字段名或具体
 配置类型分支。新增结构配置时，增加一个模板 TOML、一个同路径 configuration 模块和一条注册记录。密钥只来自环境变量。
@@ -223,7 +242,7 @@ AgentTree 的显式导入/导出适配器验证，不把存储细节加入节点
 - continuation、Responses/Chat Completions 双通道重放和多 Provider 能力协商；
 - 自动记忆、embedding、mem0/Chroma 和终态投影；
 - 七类贡献端口、manifest、面向第三方的扩展注册表和生命周期装配；
-- ops、Panel 后端、认证、附件、WebSocket 和操作注册表；
+- Panel 后端、认证、附件和 WebSocket；
 - MCP 进程管理、应用目录、sandbox 和生产化日志设施；
 - SQLite 历史 schema 与迁移链、故障恢复、租约、抢占、并发和费用统计；
 - 为上述能力存在的结构配置与测试。
@@ -245,3 +264,5 @@ AgentTree 的显式导入/导出适配器验证，不把存储细节加入节点
 5. 非法树、非法角色顺序、重复或错配 call id、越界上下文都在效果发生前失败；
 6. fake Model 与 fake Tool 可在无网络、无数据库、无环境变量时跑通全部测试；
 7. 当前 Python runtime 不再导入第 11 节已移除的生产化子系统，活动架构文档不再把它们描述为现行能力。
+8. fake Model 下可通过 Console 完成普通文本 → AgentTree → assistant → 终端输出，并通过斜杠操作查询状态和停止进程；
+9. `aurora start --headless` 与 Console 模式共享同一组合和停止路径，测试不依赖网络、密钥或真实终端。

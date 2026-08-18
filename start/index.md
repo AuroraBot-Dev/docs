@@ -9,4 +9,4 @@ order: 1
 3. [最小配置](./configuration.md)；
 4. [本地预览文档](./offline-docsite.md)。
 
-当前仓库提供 AgentTree 核心和项目组合根，不提供开箱即用的联网聊天进程。
+当前仓库提供 AgentTree 核心、LiteLLM 模型网关、统一操作目录和 `aurora start` 本地终端。
