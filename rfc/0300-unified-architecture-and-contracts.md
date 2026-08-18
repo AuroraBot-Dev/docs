@@ -53,10 +53,16 @@ AuroraBot 是以 AgentTree 为运行聚合根的自主智能体框架。当前�
 - 由 parent id 连接的有限节点集合；
 - 树级运行状态。
 
+项目可以预定义有限个无运行状态的 `AgentDefinition`。每个定义至少包含稳定 definition id、面向模型的用途说明、system
+profile id、model endpoint id、可见 Tool ID 集合和允许委派的 child definition ID 集合。定义是创建节点的完整原型，不是
+提前运行的 Agent 实例；它不含 transcript、parent、状态、结果或 tree id。同一个 profile 可以被多个定义复用，不同定义仍可
+选择不同 model、tools 和 child allowlist。
+
 `AgentNode` 至少包含：
 
 - 稳定且在树内唯一的 node id；
 - 可选 parent id；
+- 创建本节点所用的 Agent definition id；
 - profile id；
 - 本节点使用的 LLM model id；
 - 本节点可见的 Tool 名称集合；
@@ -73,6 +79,9 @@ AuroraBot 是以 AgentTree 为运行聚合根的自主智能体框架。当前�
 5. completed/failed 节点不可再次追加消息或创建 child；
 6. parent 创建 child 后进入 waiting；child 结束后 parent 收到一次对应 tool 消息并回到 ready；
 7. root 结束即整棵树结束；非 root 结束不直接结束整棵树。
+8. 每个新节点只能从组合时已注册的一个 AgentDefinition 创建；节点创建后复制 definition 的 profile、model 和 tools，后续
+   definition 目录变化不反向改写已有树；
+9. root definition 由 runtime 入口显式选择；child definition 必须位于 parent definition 的 child allowlist 中。
 
 首版实现使用内存中的不可变值对象。持久化不是核心契约；未来若加入存储，必须保存和恢复同一 `AgentTree` 语义，不能发明
 第二套运行模型。
@@ -109,8 +118,8 @@ AgentTree。
 3. 原样追加该节点已经发生的 message、assistant 和 tool transcript；
 4. 校验角色顺序、Tool call 配对和上下文上界。
 
-组装完成后的模型请求必须携带节点自己的 model id 和可见 Tool 定义。model 选择是节点事实，不由全局 runner、Provider
-或 profile id 隐式推导；因此同一 profile 的两个节点可以使用不同 model。
+组装完成后的模型请求必须携带节点自己的 model id 和可见 Tool 定义。model 在节点创建时由 AgentDefinition 显式复制为节点
+事实，之后不由全局 runner、Provider 或 profile id 临时推导；因此同一 profile 的两个定义及其节点可以使用不同 model。
 
 组装器不召回记忆、不访问数据库、不选择模型、不执行工具、不读取其他节点的完整 transcript，也不把 Tool schema重复写进
 文本。工具定义使用模型请求的原生 `tools` 字段传递。
@@ -167,10 +176,12 @@ Console 是只依赖可注入文本分派端口的本地终端前端：普通文
 `aur.serv.<服务名>.<方法>`，平台使用 `aur.<平台注册名>.<方法>`，MCP 使用
 `aur.mcp.<app_package>.<tool>`。节点只保存 ID 集合作为可见性事实，不保存执行器或定义副本；目录注册不等于节点授权。
 
-`aur.agent.delegate` 是注册表中的真实 Tool，与其他工具通过同一 `Tool` 契约暴露定义并接受调用。它只校验参数并产生
-`DelegationRequest(profile, model, tools, instruction)`，不持有或修改 AgentTree。engine 只按结果类型应用树操作并执行深度、
-节点数和 child 工具可用性约束，不再内置 delegate 的名称、schema、参数解析、保留名或单独路由分支。项目组合的
-`aurora.composition.tools` 把框架内建工具和外部注入工具合并为唯一注册表，再将该注册表注入 engine。
+`aur.agent.delegate` 是注册表中的真实 Tool，与其他工具通过同一 `Tool` 契约暴露定义并接受调用。它由不可变
+AgentDefinition 目录构造原生 schema，使 `agent` 参数列出所有 definition id 及其用途说明；调用只携带目标 `agent` 和局部
+`instruction`。工具校验参数并产生 `DelegationRequest(agent, instruction)`，不持有或修改 AgentTree。engine 只按结果类型应用
+树操作，并校验 parent 的 child allowlist、深度和节点数，再从选中的 definition 创建 child；它不再内置 delegate 的名称、
+schema、参数解析、保留名或单独路由分支。项目组合的 `aurora.composition.tools` 把框架内建工具和外部注入工具合并为唯一
+注册表，再将该注册表注入 engine。
 
 当前不建立旧工具活动、异步回执、AMP、恢复队列、动态重绑定、生命周期或多级 catalog。将来若真实异步工具需要这些语义，
 必须继续让模型只看到同一个工具 ID/definition 目录，并保持 Tool call 到一次规范化 tool 消息的对应关系。
@@ -183,15 +194,16 @@ Console 是只依赖可注入文本分派端口的本地终端前端：普通文
 | --- | --- | --- |
 | `src/utils` | 无项目语义的日志、时间、文本与序列化工具 | 标准库 |
 | `src/contracts` | Chat、Tool、Model 与 AgentTree 不可变值对象和端口 | 标准库 |
+| `src/agents` | 不可变 AgentDefinition 目录与唯一解析 | contracts |
 | `src/prompt` | 四角色 PromptAssembler | contracts |
-| `src/tools` | 不可变工具注册表、统一路由与框架内建工具 | contracts |
-| `src/engine` | AgentTree 的确定性最小循环 | contracts、prompt |
+| `src/tools` | 不可变工具注册表、统一路由与框架内建工具 | contracts、agents |
+| `src/engine` | AgentTree 的确定性最小循环 | contracts、agents、prompt、tools |
 | `src/ai` | LiteLLM 模型网关与 OpenAI-compatible 协议映射 | contracts、litellm |
 | `src/console` | 本地异步终端与终端控制 DTO | 标准库、prompt-toolkit |
 | `ops` | 热路径外的操作资源树、运行监测与显式改动入口 | 标准库、tomlkit |
 | `aurora` | 项目配置、分阶段组合根、项目 runtime 与 CLI | 所有下层包 |
 
-依赖方向固定为 `utils/contracts ← prompt/ai/tools ← engine ← aurora`，`console ← aurora`，`ops ← aurora`；ops 与 src 互不导入。核心不依赖配置加载器、
+依赖方向固定为 `utils/contracts ← agents/prompt/ai ← tools ← engine ← aurora`，`console ← aurora`，`ops ← aurora`；ops 与 src 互不导入。核心不依赖配置加载器、
 数据库、Web 框架、MCP SDK 或具体 Provider。`src` 不导入 `aurora` 或 `ops`。
 
 `ops` 保留统一操作体系的标准设计：一个 `OperationSpec` 同时描述 method/path 资源入口和斜杠文本入口，参数只解析一次，
@@ -217,7 +229,8 @@ OperationSpec 目录的独立适配器，不得反向侵入操作处理器。
   `config show <name>` 只读取注册目录和源文件，不修改配置；
 - `aurora.configuration`：每个 TOML 文件对应一个同名 Python 模块；模块定义自己的纯配置值、解析器和注册函数；
 - `aurora.composition`：每个需要项目实例的 `src` 子包对应一个同名 Python 模块；模块声明自己需要的实例并注册构造结果；
-  其中 tools 模块先把 `aur.agent.delegate` 与外部注入工具组成唯一注册表，engine 模块只消费该注册表；
+  其中 agents 模块先从纯配置构造 AgentDefinition 目录，tools 模块再用该目录构造 `aur.agent.delegate` 并与外部注入工具组成
+  唯一注册表，engine 模块消费两个目录并完成跨目录引用校验；
 - `aurora.config`：按配置目录的显式注册顺序加载全部 TOML，并合并为一个只读 `AuroraConfig`；
 - `aurora.composer`：为分阶段组合提供类型化实例键、构造上下文和只读结果，不知道具体 `src` 子包；
 - `aurora.runtime`：调用全部组件注册函数，并从组合结果取得最终 runner 和项目入口配置。
@@ -238,9 +251,11 @@ OperationSpec 目录的独立适配器，不得反向侵入操作处理器。
 
 项目配置按职责拆成 `runtime.toml`、`engine.toml`、`agents.toml`、`models.toml`、
 `prompts.toml`、`apps.toml`、`platforms.toml`、`extensions.toml`、`logging.toml` 和 `storage.toml`；环境 profile 位于
-`profiles/<name>.toml`，提示词正文位于 `prompts/`。`runtime.tree`、`engine.tree` 和 `prompts.toml` 是当前 AgentTree
-组合直接消费的配置；`runtime.console` 决定默认是否启动本地终端，`models.toml` 为 start 提供模型端点。其余配置作为已注册的
-只读项目事实进入 `AuroraConfig`，直到对应运行包出现真实用例。
+`profiles/<name>.toml`，提示词正文位于 `prompts/`。`runtime.tree` 只保存 root node id 和 root AgentDefinition id；
+`agents.toml` 定义全部可实例化 Agent 的 description、profile、model、tools 和 children；`engine.tree`、`prompts.toml` 与
+`models.toml` 分别提供树上限、profile prompt 和 model endpoint。组合时必须拒绝重复 definition id，以及不存在的 root、
+child、profile、model 或 Tool 引用。`runtime.console` 决定默认是否启动本地终端。其余配置作为已注册的只读项目事实进入
+`AuroraConfig`，直到对应运行包出现真实用例。
 
 `models.toml` 的角色键是节点显式保存和 `ModelRequest` 显式携带的 model endpoint id；每个 endpoint 固定指向一个 provider
 和协议 model 名称。Provider 不从 profile 推导 endpoint。密钥字段只声明环境变量名，真实密钥只在调用时从环境变量读取。
@@ -285,9 +300,11 @@ AgentTree 的显式导入/导出适配器验证，不把存储细节加入节点
 2. assistant Tool call 可获得 tool 结果并继续到最终 assistant；
 3. `aur.agent.delegate` 与其他 Tool 一样存在于注册表和模型请求的原生 tools 字段中；其 call 可创建 child，child 完成后正确
    恢复 parent，最终完成 root；engine 不按该工具名分派；
-4. PromptAssembler 只产生 system、message、assistant、tool 四种领域 role，Provider adapter 单独测试 message → user 映射；
-5. 非法树、非法角色顺序、重复或错配 call id、越界上下文都在效果发生前失败；
-6. fake Model 与 fake Tool 可在无网络、无数据库、无环境变量时跑通全部测试；
-7. 当前 Python runtime 不再导入第 11 节已移除的生产化子系统，活动架构文档不再把它们描述为现行能力。
-8. fake Model 下可通过 Console 完成普通文本 → AgentTree → assistant → 终端输出，并通过斜杠操作查询状态和停止进程；
-9. `aurora start --headless` 与 Console 模式共享同一组合和停止路径，测试不依赖网络、密钥或真实终端。
+4. root 与 child 都从预定义 AgentDefinition 创建；两个定义可以共享 profile 而使用不同 model/tools，delegate 只能选择
+   parent allowlist 内的 child definition；
+5. PromptAssembler 只产生 system、message、assistant、tool 四种领域 role，Provider adapter 单独测试 message → user 映射；
+6. 非法树、非法角色顺序、重复或错配 call id、越界上下文都在效果发生前失败；
+7. fake Model 与 fake Tool 可在无网络、无数据库、无环境变量时跑通全部测试；
+8. 当前 Python runtime 不再导入第 11 节已移除的生产化子系统，活动架构文档不再把它们描述为现行能力。
+9. fake Model 下可通过 Console 完成普通文本 → AgentTree → assistant → 终端输出，并通过斜杠操作查询状态和停止进程；
+10. `aurora start --headless` 与 Console 模式共享同一组合和停止路径，测试不依赖网络、密钥或真实终端。
