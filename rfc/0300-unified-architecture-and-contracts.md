@@ -164,10 +164,21 @@ delegate 是唯一内建 Tool，由 engine 解释为树操作，不交给外部 
 | `src/prompt` | 四角色 PromptAssembler | contracts |
 | `src/engine` | AgentTree 的确定性最小循环 | contracts、prompt |
 | `src/ai` | 可选 Provider adapter | contracts |
-| `aurora` | 示例组合根与 CLI | 所有下层包 |
+| `aurora` | 项目配置、分阶段组合根、项目 runtime 与 CLI | 所有下层包 |
 
 依赖方向固定为 `contracts ← prompt/ai ← engine ← aurora`。核心不依赖配置加载器、数据库、Web 框架、MCP SDK 或具体
 Provider。`src` 不导入 `aurora`。
+
+`aurora` 虽不属于认知核心，仍保留以下必要的增长边界：
+
+- `aurora.commands`：每个 CLI 命令一个模块，由命令目录统一注册；命令实现不进入 `main.py`；
+- `aurora.configuration`：`models.py` 只定义运行前组合配置，`loader.py` 只解析和校验 TOML，不构造下层实现对象；
+- `aurora.composition`：唯一组合根，并按 prompt、engine、runtime 等构造阶段拆分模块；阶段模块只构造自己负责的对象；
+- `aurora.runtime`：组合完成后的项目级使用门面，不承担配置解析或对象发现。
+
+这些子包是已经确定的独立变化轴，不属于应当删除的预支抽象。增加命令、配置节或新的组合阶段时，应新增对应模块并在
+目录入口显式注册，不把分支继续堆入单个入口文件。配置 DTO 不直接使用 PromptCatalog、AgentTreeRunner 等实现期对象；
+从配置形状到运行对象的转换只发生在 composition。
 
 ## 10. 配置与存储
 
