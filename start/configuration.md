@@ -24,6 +24,9 @@ cp -r config.example config
 
 `aurora config list` 列出注册名称与源文件，`aurora config show <name>` 原样显示一份 TOML。当前命令只读。
 
+`aurora start` 在读取 TOML 前加载项目根目录的 `.env`。它只补充进程中尚不存在的环境变量，不覆盖调用方显式设置的
+值；文件不存在等同于没有额外环境输入。`.env` 仅存放本地密钥等环境值，不承担结构配置职责，并由 Git 忽略。
+
 `models.roles` 的键是 model endpoint id，必须显式写入节点和 ModelRequest。endpoint 固定映射 provider/model；profile 只决定
 提示词，不决定模型。child 由 delegate call 显式指定 profile、model、tools 和 instruction。`litellm` 与
 `openai_compatible` provider 都通过 LiteLLM 模型网关调用，密钥只读取 `secret_env` 指定的环境变量。

@@ -201,8 +201,9 @@ OperationSpec 目录的独立适配器，不得反向侵入操作处理器。
 - `aurora.config`：按配置目录的显式注册顺序加载全部 TOML，并合并为一个只读 `AuroraConfig`；
 - `aurora.composer`：为分阶段组合提供类型化实例键、构造上下文和只读结果，不知道具体 `src` 子包；
 - `aurora.runtime`：调用全部组件注册函数，并从组合结果取得最终 runner 和项目入口配置。
-- `aurora start`：加载个人配置，从已注册模型端点构造 Model，组合一个 AuroraRuntime，并统一管理 Console、停止事件和
-  SIGINT/SIGTERM；`--headless` 只禁用 Console。当前没有 Platform，因此不接受或伪装平台选择参数；
+- `aurora start`：首先读取项目根目录的 `.env`，且不覆盖进程已有环境变量；随后加载个人配置，从已注册模型端点构造
+  Model，组合一个 AuroraRuntime，并统一管理 Console、停止事件和 SIGINT/SIGTERM；`--headless` 只禁用 Console。当前没有
+  Platform，因此不接受或伪装平台选择参数；
 - `aurora.utils`：只保存无项目语义的功能工具，例如子进程执行与 TOML 字段读取。
 
 命令、配置和组合使用同一种扩展成本：新增一个并列模块，并在对应目录入口增加一条显式注册记录。中心加载器、
@@ -226,6 +227,9 @@ OperationSpec 目录的独立适配器，不得反向侵入操作处理器。
 当前模型效果统一经过 LiteLLM 网关：`litellm` adapter 使用显式 `provider/model`，`openai_compatible` adapter 使用
 `openai/model + api_base`。两者共用 Chat Completions 消息与 Tool 映射，不建立绕过网关的直连客户端；其他 adapter 启动即
 失败，不进行隐式兼容猜测。
+
+`.env` 是本地启动便利入口，只能向进程环境补充尚不存在的变量，不覆盖调用者显式设置的环境，也不定义或改写 TOML
+结构。文件不存在时按空环境处理；`.env` 与 `config/` 一样属于个人文件，不进入源码发布或 Git 跟踪。
 
 模板与个人目录保持相同拓扑。每个 TOML 只由同相对路径的 configuration 模块解析；通用加载器不包含文件名、字段名或具体
 配置类型分支。新增结构配置时，增加一个模板 TOML、一个同路径 configuration 模块和一条注册记录。密钥只来自环境变量。
