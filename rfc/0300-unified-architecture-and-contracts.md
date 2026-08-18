@@ -163,10 +163,24 @@ delegate 是唯一内建 Tool，由 engine 解释为树操作，不交给外部 
 | `src/prompt` | 四角色 PromptAssembler | contracts |
 | `src/engine` | AgentTree 的确定性最小循环 | contracts、prompt |
 | `src/ai` | 可选 Provider adapter | contracts |
+| `ops` | 热路径外的操作资源树、运行监测与显式改动入口 | 标准库、tomlkit |
 | `aurora` | 项目配置、分阶段组合根、项目 runtime 与 CLI | 所有下层包 |
 
-依赖方向固定为 `contracts ← prompt/ai ← engine ← aurora`。核心不依赖配置加载器、数据库、Web 框架、MCP SDK 或具体
-Provider。`src` 不导入 `aurora`。
+依赖方向固定为 `contracts ← prompt/ai ← engine ← aurora`，`ops ← aurora`；ops 与 src 互不导入。核心不依赖配置加载器、
+数据库、Web 框架、MCP SDK 或具体 Provider。`src` 不导入 `aurora` 或 `ops`。
+
+`ops` 保留统一操作体系的标准设计：一个 `OperationSpec` 同时描述 method/path 资源入口和斜杠文本入口，参数只解析一次，
+处理器统一返回 `OperationResult`。操作按领域模块显式注册，目录可自描述。它只经组合根注入的窄端口观察或请求改动：
+
+- 运行监测读取当前及已完成的 AgentTree、节点、状态和 transcript 投影；
+- 运行改动只能请求 AuroraRuntime 发起一棵新树，不直接替换节点或追加消息；
+- 配置监测读取 `AuroraConfig` 的注册目录和个人 TOML；
+- 配置改动当前只允许切换 `apps.toml` / `extensions.toml` 中既有条目的 `enabled`，保留注释，并在值发生变化时返回
+  `restart_required = true`；不得修改 `config.example/`；
+- ops 不拥有第二份运行状态，不进入 AgentTreeRunner 热路径；engine 只通过通用观察回调发布不可变树快照，不依赖 ops。
+
+当前 ops 是适配器中立的核心，不包含 HTTP 服务、Panel 认证、附件、WebSocket、数据库或前端 Lab；这些都是以后消费同一
+OperationSpec 目录的独立适配器，不得反向侵入操作处理器。
 
 `aurora` 虽不属于认知核心，仍保留以下必要的增长边界：
 
