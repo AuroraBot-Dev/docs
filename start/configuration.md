@@ -4,7 +4,13 @@ order: 3
 
 # 配置
 
-当前配置目录包含：
+`config.example/` 是随源码发布的完整模板。首次使用时复制为个人配置：
+
+```bash
+cp -r config.example config
+```
+
+`config/` 被 Git 忽略；运行时和配置命令只读取个人目录，不会回退到模板。目录包含：
 
 - `runtime.toml` 与 `engine.toml`：进程参数和 AgentTree 边界；
 - `agents.toml`、`models.toml` 与 `prompts.toml`：Agent、模型角色和提示词路径；
@@ -13,7 +19,7 @@ order: 3
 - `profiles/*.toml`：环境 profile；
 - `prompts/**/*.md`：SOUL、WORLD 和各 Agent 的提示词正文。
 
-每个 TOML 由 `aurora.configuration` 中同相对路径的模块解析并注册。全部值按显式注册顺序合并为一个 `AuroraConfig`。
+每个 TOML 由 `aurora.configuration` 中同相对路径的模块解析并注册。全部个人配置按显式注册顺序合并为一个 `AuroraConfig`。
 增加配置只需要一个 TOML、一个同路径 Python 模块和目录入口中的一条注册记录。
 
 `aurora config list` 列出注册名称与源文件，`aurora config show <name>` 原样显示一份 TOML。当前命令只读。

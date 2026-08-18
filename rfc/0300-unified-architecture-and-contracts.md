@@ -186,13 +186,16 @@ Provider。`src` 不导入 `aurora`。
 
 ## 10. 配置与存储
 
-核心值对象可直接由 Python 构造。项目配置按职责拆成 `runtime.toml`、`engine.toml`、`agents.toml`、`models.toml`、
+核心值对象可直接由 Python 构造。`config.example/` 是随源码发布的完整配置模板；用户将其复制为 `config/` 后形成个人生效
+配置。`config/` 必须被 Git 忽略，运行时和 `aurora config` 只读取它，不隐式回退到模板，也不把个人修改写回源码。
+
+项目配置按职责拆成 `runtime.toml`、`engine.toml`、`agents.toml`、`models.toml`、
 `prompts.toml`、`apps.toml`、`platforms.toml`、`extensions.toml`、`logging.toml` 和 `storage.toml`；环境 profile 位于
 `profiles/<name>.toml`，提示词正文位于 `prompts/`。`runtime.tree`、`engine.tree` 和 `prompts.toml` 是当前 AgentTree
 组合直接消费的配置，其余配置作为已注册的只读项目事实进入 `AuroraConfig`，直到对应运行包出现真实用例。
 
-每个 TOML 只由同相对路径的 configuration 模块解析；通用加载器不包含文件名、字段名或具体配置类型分支。新增结构配置时，
-增加一个 TOML、一个同路径 configuration 模块和一条注册记录。密钥只来自环境变量。
+模板与个人目录保持相同拓扑。每个 TOML 只由同相对路径的 configuration 模块解析；通用加载器不包含文件名、字段名或具体
+配置类型分支。新增结构配置时，增加一个模板 TOML、一个同路径 configuration 模块和一条注册记录。密钥只来自环境变量。
 
 当前不定义运行时数据库、schema 版本、迁移、会话归档、费用库、记忆库或面板存储。需要持久化时，先以完整
 AgentTree 的显式导入/导出适配器验证，不把存储细节加入节点契约。
