@@ -3,7 +3,7 @@ layout: home
 
 hero:
   name: AuroraBot
-  text: 从一棵 AgentTree 重新开始
+  text: 一棵 AgentTree，一次完整运行
   tagline: 同构节点 · 四角色上下文 · 树形委派
   image:
     src: /logo.svg
@@ -26,6 +26,6 @@ features:
     details: root 与 child 使用同一种循环，只因 system profile、初始 message、可见 tools 和 LLM model 不同。
   - title: 四角色上下文
     details: 核心只承认 system、message、assistant 和 tool；Provider adapter 才处理供应商角色差异。
-  - title: 保留项目组合
-    details: config/aurora.toml 经唯一组合根构造 PromptAssembler、AgentTreeRunner 和 AuroraRuntime。
+  - title: 显式项目组合
+    details: 每个 TOML 和项目组件都有同名注册模块，统一构造 AuroraConfig、AgentTreeRunner 和 AuroraRuntime。
 ---

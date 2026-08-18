@@ -1,7 +1,7 @@
 # AuroraBot 文档
 
-本仓库是 AuroraBot 文档站与唯一 RFC 的源码。当前文档描述架构收核后的 AgentTree 实验核心：四角色消息、节点级
-profile/model/tools/message、树形委派以及项目组合根。
+本仓库是 AuroraBot 文档站与唯一 RFC 的源码。当前文档描述 AgentTree 核心：四角色消息、节点级
+profile/model/tools/message、树形委派、注册式配置以及项目组合根。
 
 ```bash
 npm install

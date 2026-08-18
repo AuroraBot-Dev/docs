@@ -34,7 +34,7 @@ npm run docs:dev
 npm run docs:build
 ```
 
-输出位于 `.vitepress/dist`。构建会校验站内链接；不要用忽略死链掩盖已删除的旧架构页面。
+输出位于 `.vitepress/dist`。构建会校验站内链接；不要用忽略死链掩盖已经不存在的页面。
 
 ## 内容基准
 

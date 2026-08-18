@@ -5,8 +5,10 @@ order: 1
 # 系统总览
 
 ```text
-config/aurora.toml
-  → load_configuration
+config/{runtime,engine,prompt}.toml
+  → configuration 同名模块注册
+  → AuroraConfig
+  → composition/{prompt,engine}.py 注册实例
   → assemble_runtime(Model, Tools)
   → AuroraRuntime.create_tree(message)
   → AgentTreeRunner

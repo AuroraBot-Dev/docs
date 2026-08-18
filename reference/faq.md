@@ -16,6 +16,6 @@ order: 2
 
 可以。model 是 AgentNode 的显式属性，也是 delegate 参数和 ModelRequest 的一部分；它不由 profile 隐式决定。
 
-## 旧的记忆、MCP 和 Panel 去哪里了？
+## 为什么当前没有记忆、MCP 和 Panel？
 
-它们在架构收核中被移除。历史仍在 Git 中；未来只有出现围绕 AgentTree 的真实用例后才重新设计。
+当前架构只接纳围绕 AgentTree 具有明确用例、不变量和独立测试的能力；这些能力尚不在当前范围内。
