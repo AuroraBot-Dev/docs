@@ -5,21 +5,72 @@ order: 1
 # 系统总览
 
 ```text
-config.example/（源码模板） → config/（个人配置，Git 忽略）
-  → TOML + prompts/**/*.md
-  → configuration 同名模块注册
-  → AuroraConfig
-  → composition/{ai,prompt,console,engine}.py 注册实例
-  → aurora start / assemble_runtime(Model?, Tools)
-  → Console 普通文本或 ops /run 创建 AgentTree
-  → AgentTreeRunner
-      → PromptAssembler
-      → LiteLLMModelGateway.complete
-      → Tool.execute / delegate child
+config.example/（源码模板） ──复制──→ config/（个人配置，Git 忽略）
+                                      │
+                          TOML + prompts/**/*.md
+                                      │  configuration/<同名>.py 显式注册
+                                      ▼
+                               AuroraConfig（只读纯配置）
+
+composition 注册顺序（world 第一个实例化，且全局唯一）：
+  world → agents → ai → prompt → console → tools → engine
+
+普通终端输入（不特化，先入世界线）：
+  TerminalConsole ──WorldWriter.append_commit──→ WorldJournal
+        │  console.input / aurora:console
+        ▼
+  TerminalDispatcher → OpsRuntime.route_text 或 POST /trees
+
+斜杠命令与 JSON 输出：
+  /<command> ──→ OperationRouter ──→ ops/operations/<pkg>.py
+                                          │ OperationResult.success(data)
+                                          ▼
+                                  终端以 JSON 渲染 data
+
+AgentTree 热路径：
+  AgentTreeRunner.run(tree)
+    ├─ 记录 engine.tree.started / model.* / tool.* / node.* / output.* / tree.completed
+    ├─ 检查 WorldJournal 未披露 delta → 先交付，再执行已封口的 Tool batch
+    ├─ PromptAssembler 只组装四角色上下文
+    ├─ LiteLLMModelGateway.complete(ModelRequest)
+    └─ ToolRegistry.execute(ToolCall)
+           ├─ ToolOutput → tool 消息
+           └─ DelegationRequest → child AgentNode
 ```
 
-`src/contracts` 定义不可变值对象和 Model/Tool 端口；`src/prompt` 只组装上下文；`src/engine` 只运行树；`src/ai` 提供
-LiteLLM 网关；`src/console` 只负责终端交互；ops 提供统一操作目录；`aurora` 是唯一认识配置和具体注入对象的组合根。
+## 包边界一句话
 
-依赖方向是 `utils/contracts ← prompt/ai ← engine ← aurora`、`console ← aurora`、`ops ← aurora`。当前没有数据库、后台平台或
-第二套状态权威。
+- `src/contracts`：全部公共值对象与端口，含世界线端口和稳定 scope/kind 常量；
+- `src/world`：WorldJournal 的唯一持久化实现，组合时第一个构造；
+- `src/agents`：不可变 `AgentDefinition` 目录与唯一解析；
+- `src/tools`：全项目工具汇总处：注册表 + 框架内建工具；
+- `src/prompt`：四角色 `PromptAssembler`，保持纯函数；
+- `src/ai`：LiteLLM 模型网关与 Provider 协议映射，不持有 world；
+- `src/console`：本地异步终端，输入事件先入世界线，输出不入；
+- `src/engine`：确定性 AgentTree 执行器，通过 WorldJournal 记录全部运行因果；
+- `ops`：热路径外的统一操作目录，为每个包提供 method/path 与斜杠入口；
+- `aurora`：唯一组合根、配置加载、runtime 门面与 CLI。
+
+## 世界访问权
+
+| 包 | 世界角色 | 端口 |
+| --- | --- | --- |
+| `src/console` | 事件生产者 | `WorldWriter` |
+| 未来 `src/mcp` | 事件生产者 | `WorldWriter` |
+| 未来 `src/cadence` | 节律生产者 + 状态读者 | `WorldReader` + `WorldWriter` |
+| `src/prompt` | 需要时只读 | `WorldReader`（当前组合未注入） |
+| 未来 `src/memory` | 只读消费者 | `WorldReader` |
+| `src/engine` | 因果记录者 + delta 读者 | `WorldJournal` |
+| `src/ai` | 不持有 | 无 |
+| 未来 `src/sandbox` | 不持有 | 无 |
+
+## 依赖方向
+
+```text
+contracts ← agents / prompt / tools / ai / world
+agents/contracts ← tools ← engine ← aurora
+console ← aurora；ops ← aurora
+```
+
+`src` 不导入 `aurora` 或 `ops`；`ops` 不导入 `src` 或 `aurora`；`src/world` 只被
+`aurora.composition.world` 引用。
