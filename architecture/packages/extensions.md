@@ -1,10 +1,10 @@
 ---
-order: 13
+order: 14
 ---
 
 # 未来扩展包（规划）
 
-以下包当前不实现；只固定它们的 world 访问权和 ops 入口形态，避免未来各建一套。
+memory 已从规划移入工作树，见 [memory](./memory.md)。以下包当前不实现；只固定它们的 world 访问权和 ops 入口形态，避免未来各建一套。
 
 ## mcp（规划）
 
@@ -13,13 +13,6 @@ order: 13
 - 提交内容：`mcp.*` 事件，scope 由 mcp 适配器按调用上下文决定；
 - 工具 ID 统一为 `aur.mcp.<app_package>.<tool>`，经 `src/tools` 注入；
 - ops 入口：`GET /mcp` 状态、`POST /mcp/{app}/reload` 等按基线注册。
-
-## memory（规划）
-
-- 定位：长期记忆检索与写入建议；
-- 世界访问权：只读 `WorldReader`；
-- 不直接追加世界提交；记忆事实若成为环境事实，必须由环境生产者显式提交；
-- ops 入口：`GET /memory` 状态、`GET /memory/query`（只读）。
 
 ## sandbox（规划）
 

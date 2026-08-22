@@ -13,7 +13,7 @@ config.example/（源码模板） ──复制──→ config/（个人配置�
                                AuroraConfig（只读纯配置）
 
 composition 注册顺序（world 第一个实例化，且全局唯一）：
-  world → agents → ai → prompt → console → tools → engine
+  world → memory → cadence → agents → ai → prompt → console → tools → engine
 
 普通终端输入（不特化，先入世界线）：
   TerminalConsole ──WorldWriter.append_commit──→ WorldJournal
@@ -30,6 +30,7 @@ composition 注册顺序（world 第一个实例化，且全局唯一）：
 AgentTree 热路径：
   AgentTreeRunner.run(tree)
     ├─ 记录 engine.tree.started / model.* / tool.* / node.* / output.* / tree.completed
+    ├─ Memory.recall() → MemorySnapshot → PromptAssembler 注入 system
     ├─ 检查 WorldJournal 未披露 delta → 先交付，再执行已封口的 Tool batch
     ├─ PromptAssembler 只组装四角色上下文
     ├─ LiteLLMModelGateway.complete(ModelRequest)
@@ -48,6 +49,8 @@ AgentTree 热路径：
 - `src/ai`：LiteLLM 模型网关与 Provider 协议映射，不持有 world；
 - `src/console`：本地异步终端，输入事件先入世界线，输出不入；
 - `src/engine`：确定性 AgentTree 执行器，通过 WorldJournal 记录全部运行因果；
+- `src/memory`：最近一小时活跃 scope 的最近 50 条提交记忆，经 prompt 注入 system；
+- `src/cadence`：每小时提交 tick，每 5 个非 engine 世界提交唤起一棵 triage AgentTree；
 - `ops`：热路径外的统一操作目录，为每个包提供 method/path 与斜杠入口；
 - `aurora`：唯一组合根、配置加载、runtime 门面与 CLI。
 

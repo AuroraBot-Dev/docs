@@ -1,5 +1,5 @@
 ---
-order: 9
+order: 10
 ---
 
 # src/engine
@@ -9,7 +9,7 @@ AgentTree 的确定性执行器。engine 只负责把一棵已经决定的树跑
 ## 职责
 
 - 深度优先选择 ready 节点，单线程执行一个 Model 或 Tool；
-- `PromptAssembler` 组装上下文，`ToolRegistry` 分派工具；
+- `PromptAssembler` 组装上下文（模型请求前先召回 `MemorySnapshot` 注入 system），`ToolRegistry` 分派工具；
 - delegate 结果只按 `DelegationRequest` 应用树操作，并按 parent allowlist、深度、节点数校验；
 - 在 Tool batch 与 root draft 前检查世界 delta，未披露时先交付并显式封口；
 - 通过 `WorldJournal` 记录一棵树的完整因果链。
@@ -29,21 +29,21 @@ engine 以确定性 commit id 提交（节选）：
 
 模型事件只记录元数据（model、消息数、工具数、错误），不复制 transcript 正文；正文以 AgentTree 快照为准。
 
-## 规划：TreeLaunchRequest
+## TreeLaunchRequest
 
-唤起决策将从 engine 拆出到 `cadence`。engine 只消费：
+唤起决策已经从 engine 拆出到 `cadence`。`AuroraRuntime.launch_tree` 消费同一值对象：
 
 ```python
 @dataclass(frozen=True)
 class TreeLaunchRequest:
-    tree_id: str | None
-    root_definition_id: str
     message: str
-    frontier: WorldFrontier | None
+    tree_id: str | None
+    agent: str | None
+    frontier: WorldFrontier
     caused_by: str | None
 ```
 
-交互式 `/run` 与后台 cadence 唤起最终走同一 engine 入口。
+交互式 `/run` 与后台 cadence 唤起都落到 `engine.run` 同一入口。
 
 ## 组合
 

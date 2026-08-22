@@ -1,5 +1,5 @@
 ---
-order: 11
+order: 12
 ---
 
 # ops
@@ -26,11 +26,15 @@ ops/
     ai.py
     world.py
     console.py
+    cadence.py
+    memory.py
+    utils.py
+    contracts.py
 ```
 
 ## 每个包的窄端口
 
-`OpsPorts` 汇总 `engine / config / process / agents / tools / prompt / ai / world / console`。新增包时：
+`OpsPorts` 汇总 `engine / config / process / agents / tools / prompt / ai / world / console / cadence / memory / utils / contracts`。新增包时：
 
 1. 在 `ops/contracts.py` 增加 `<Pkg>RuntimePort` Protocol 和 `OpsPorts` 字段；
 2. `AuroraRuntime` 实现该端口，并在构造 `OpsRuntime` 时注入；
@@ -51,6 +55,8 @@ ops/
 | ai | `GET /models`、`GET /models/{id}` | 无（endpoint 只读） |
 | world | `GET /world/stream`、`GET /world/commits/{id}` | 无（写入只经各生产者端口） |
 | console | `GET /console` | 无（输入来自终端循环本身） |
+| cadence | `GET /cadence` | `POST /cadence/trigger` |
+| memory | `GET /memory` | 无（只读快照） |
 | utils | `GET /utils` | 无（纯工具能力清单） |
 | contracts | `GET /contracts` | 无（公共值对象与端口清单） |
 

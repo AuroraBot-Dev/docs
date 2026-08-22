@@ -1,5 +1,5 @@
 ---
-order: 12
+order: 13
 ---
 
 # aurora
@@ -25,6 +25,8 @@ aurora/
 ```python
 COMPOSITION_REGISTRARS = (
     world.register,    # 世界单例第一个构造
+    memory.register,   # 只读世界记忆
+    cadence.register,  # 节律 + 唤起策略
     agents.register,
     ai.register,
     prompt.register,
@@ -41,13 +43,13 @@ COMPOSITION_REGISTRARS = (
 ## 生命周期
 
 - `assemble_runtime()`：配置 → 组合 → `AuroraRuntime`；
-- `run_project()`：`await runtime.world.initialize()` 一次，再进入 Console 或 headless 停止等待；
+- `run_project()`：`await runtime.world.initialize()` 一次；`cadence.enabled = true` 时创建节律后台任务；再进入 Console 或 headless 停止等待；
 - SIGINT / SIGTERM / EOF / `/exit` 汇聚到同一停止事件。
 
 ## ops 端口
 
 `AuroraRuntime` 实现 `TreeRuntimePort / ConfigRuntimePort / ProcessRuntimePort` 以及
-`Agents/Tools/Prompt/Ai/World/ConsoleRuntimePort`，在 `__post_init__` 注入 `OpsRuntime`。
+`Agents/Tools/Prompt/Ai/World/Console/Cadence/Memory/Utils/ContractsRuntimePort`，在 `__post_init__` 注入 `OpsRuntime`。
 
 ## CLI
 

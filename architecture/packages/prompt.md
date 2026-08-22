@@ -13,15 +13,13 @@ order: 6
 - child 的 system 注入局部职责，首条 message 注入 parent assignment；
 - 校验角色顺序、Tool call 配对与上下文上界。
 
-## 世界访问权
+## 世界访问权与记忆注入
 
-需要时通过 `WorldReader` 只读获得世界。当前组合保持 `PromptAssembler` 为纯函数，不注入 reader；
-世界更新由 engine 以显式 delta message/tool 结果送入 transcript，保证模型看到的事实有审计路径。
-若未来 prompt 直接读取世界，必须：
-
-- 只依赖 `WorldReader`；
-- 显式使用节点 `observed_frontier`；
-- 组装结果保持确定性与可重放。
+- `PromptAssembler.assemble(..., memory=MemorySnapshot | None)` 接收记忆快照；
+- 记忆由 `src/memory` 的 `WorldReader` 查询，由 engine 在模型请求前召回并传入；
+- 记忆以“最近一小时的世界活动”片段注入唯一 system 消息，不写 transcript；
+- 世界更新本身仍由 engine 以显式 delta message/tool 结果送入 transcript，保证模型看到的事实有审计路径；
+- 若未来 prompt 直接读取世界，必须只依赖 `WorldReader`、显式使用节点 `observed_frontier`，并保持确定性可重放。
 
 ## 组合
 

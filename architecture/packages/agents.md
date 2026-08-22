@@ -5,7 +5,12 @@ order: 4
 # src/agents
 
 具体 Agent 的定义处。workerAgent、memoryAgent、gateAgent 等都应成为这里的 `AgentDefinition` 预设，
-而不是新的 AgentNode 子类。
+而不是新的 AgentNode 子类。当前 `config.example/agents.toml` 已有：
+
+- `builtin.root`：总代理，可委派 worker / fast-worker / reviewer；
+- `builtin.worker` / `builtin.fast-worker` / `builtin.reviewer`：执行与审阅分工；
+- `builtin.triage`：注意力初筛，cadence 默认经它唤起；可委派 root / worker / fast-worker；
+- `builtin.memory`：记忆专员预设，prompt 只负责忠实写入记忆。
 
 ## 职责
 

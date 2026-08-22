@@ -11,8 +11,8 @@ order: 3
 
 - SQLite + SQLAlchemy 的只追加提交存储；
 - 每个 scope 的单调 sequence 分配；
-- 全局 `insertion_sequence` 连续游标与 `stream(after, limit)` 分页；
-- 按 scope 的 `head` / `delta` / `commits` 查询；
+- 全局 `insertion_sequence` 连续游标、`cursor()` 与 `stream(after, limit)` 分页；
+- 按 scope 的 `head` / `delta` / `commits` / `active_scopes(since)` 查询；
 - 稳定 `commit_id` 的幂等追加：重复提交同 ID 且内容一致时返回原提交，内容冲突立即失败；
 - schema version 与逐版本 migration。
 
@@ -41,8 +41,9 @@ order: 3
 | `tool.requested` / `succeeded` / `failed` | engine | `aurora:tree:<id>` + 工具 publish |
 | `output.requested` / `committed` | engine | `aurora:tree:<id>` |
 | `engine.world.delta_delivered` | engine | `aurora:tree:<id>` |
-
-规划：`ops.config.changed` 等写入类操作成功后以 `aurora:config` 提交。
+| `cadence.tick` / `tree_planned` / `tree_failed` | cadence | `aurora:cadence` |
+| `ops.config.changed` | ops | `aurora:config` |
+| `ops.tree.requested` / `ops.process.shutdown_requested` | ops | `aurora:system` |
 
 ## ops 入口
 
