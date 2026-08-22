@@ -140,8 +140,9 @@ Bot 的环境事实、工具请求与工具结果、root 对外发布都进入�
 稳定 event id、source、scope、kind、发生时间、面向模型的 summary 和结构化 data。提交可以归属多个 scope；每个 scope 有独立
 单调 sequence。`WorldFrontier` 是 scope 到 sequence 的不可变映射，不相关 scope 的新提交不得互相阻塞。
 
-Tree 只基于已经披露给其 node 的 frontier 推理。环境适配器只提供有界提交索引，不能替 Bot 按语义筛选消息；当前 delta
-只交付索引，按提交读取正文是后续独立 Tool 的扩展点。索引超过上界时分页交付，未披露页面不得被记为已观察。
+Tree 只基于已经披露给其 node 的 frontier 推理。环境适配器只提供有界提交索引，不能替 Bot 按语义筛选消息；delta 只
+交付索引，正文读取由独立服务工具承担：`aur.serv.world.read` 按 scope 与序号有界读取提交正文并声明观察该 scope，
+`aur.serv.world.trees` 列出由提交推导的 Bot 森林索引。索引超过上界时分页交付，未披露页面不得被记为已观察。
 
 任何 assistant Tool batch 和 root 的最终文本都必须先提交检查：有未披露 delta 时，整个 batch 不执行，所有 Tool call 获得
 配对的 deferred tool 结果；root draft 以普通 message 收到 delta。node 看完全部页面后的下一次 Tool batch 或 root 文本，
@@ -185,7 +186,8 @@ Tree 只基于已经披露给其 node 的 frontier 推理。环境适配器只�
 
 - `Model.complete(request) -> AssistantMessage`，其中 request 显式携带 node 的 model id；
 - `Tool.execute(call) -> ToolResult`，其中当前结果只有普通 `ToolOutput` 和树操作 `DelegationRequest` 两种。
-- `WorldJournal` 只追加环境、Tool 与输出提交，并按 scope 提供 head 与有界 delta；它不保存 AgentTree。
+- `WorldJournal` 只追加环境、Tool 与输出提交，并按 scope 提供 head、有界 delta 与正文查询，以及从提交推导的 Bot 森林
+  索引；它不保存 AgentTree。
 
 Provider、Console、MCP、定时器和未来平台都是这两个端口之外的适配器或 message 来源。首版不定义 InputGateway、
 EventSource、ControlAction、ContextContributor、OutputSink、Projector、Manifest 或 Lifecycle 公共体系。
