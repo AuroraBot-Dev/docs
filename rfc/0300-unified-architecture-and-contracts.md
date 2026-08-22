@@ -54,8 +54,8 @@ AuroraBot 是以 AgentTree 为运行聚合根的自主智能体框架。当前�
 - 树级运行状态。
 
 项目可以预定义有限个无运行状态的 `AgentDefinition`。每个定义至少包含稳定 definition id、面向模型的用途说明、system
-profile id、model endpoint id、可见 Tool ID 集合和允许委派的 child definition ID 集合。定义是创建节点的完整原型，不是
-提前运行的 Agent 实例；它不含 transcript、parent、状态、结果或 tree id。同一个 profile 可以被多个定义复用，不同定义仍可
+prompt id、model endpoint id、可见 Tool ID 集合和允许委派的 child definition ID 集合。定义是创建节点的完整原型，不是
+提前运行的 Agent 实例；它不含 transcript、parent、状态、结果或 tree id。同一个 prompt 可以被多个定义复用，不同定义仍可
 选择不同 model、tools 和 child allowlist。
 
 `AgentNode` 至少包含：
@@ -63,7 +63,7 @@ profile id、model endpoint id、可见 Tool ID 集合和允许委派的 child d
 - 稳定且在树内唯一的 node id；
 - 可选 parent id；
 - 创建本节点所用的 Agent definition id；
-- profile id；
+- prompt id；
 - 本节点使用的 LLM model id；
 - 本节点可见的 Tool 名称集合；
 - node-local transcript（不含由组装器生成的 system）；
@@ -79,7 +79,7 @@ profile id、model endpoint id、可见 Tool ID 集合和允许委派的 child d
 5. completed/failed 节点不可再次追加消息或创建 child；
 6. parent 创建 child 后进入 waiting；child 结束后 parent 收到一次对应 tool 消息并回到 ready；
 7. root 结束即整棵树结束；非 root 结束不直接结束整棵树。
-8. 每个新节点只能从组合时已注册的一个 AgentDefinition 创建；节点创建后复制 definition 的 profile、model 和 tools，后续
+8. 每个新节点只能从组合时已注册的一个 AgentDefinition 创建；节点创建后复制 definition 的 prompt、model 和 tools，后续
    definition 目录变化不反向改写已有树；
 9. root definition 由 runtime 入口显式选择；child definition 必须位于 parent definition 的 child allowlist 中。
 
@@ -101,6 +101,9 @@ profile id、model endpoint id、可见 Tool ID 集合和允许委派的 child d
 Chat Completions 时，Provider adapter 在协议边界把 `message` 映射为 `user`；其余三个 role 保持原义。该映射不得泄漏回
 AgentTree。
 
+`role` 一词只用于 ChatMessage 的四种消息角色，不表示模型档位、Agent 类型或提示词档案。模型选择使用 model endpoint id；
+完整 Agent preset 使用 AgentDefinition id；system 提示词引用使用 prompt id。三者不得复用 `role` 或 `profile` 命名。
+
 消息约束：
 
 - `system` 和 `message` 必须有非空文本，不能携带 Tool call 或 call id；
@@ -113,13 +116,13 @@ AgentTree。
 
 `PromptAssembler` 是纯函数对象，输入 `AgentTree + node id`，输出该节点下一次模型调用的四角色消息序列。它只做以下工作：
 
-1. 把全局人格、世界说明和 node profile 按固定顺序合并成唯一 system 消息；
+1. 把全局人格、世界说明和 node prompt 按固定顺序合并成唯一 system 消息；
 2. 在 child 的 system 中加入其局部职责，在首条 message 中加入 parent 给出的 assignment；
 3. 原样追加该节点已经发生的 message、assistant 和 tool transcript；
 4. 校验角色顺序、Tool call 配对和上下文上界。
 
 组装完成后的模型请求必须携带节点自己的 model id 和可见 Tool 定义。model 在节点创建时由 AgentDefinition 显式复制为节点
-事实，之后不由全局 runner、Provider 或 profile id 临时推导；因此同一 profile 的两个定义及其节点可以使用不同 model。
+事实，之后不由全局 runner、Provider 或 prompt id 临时推导；因此同一 prompt 的两个定义及其节点可以使用不同 model。
 
 组装器不召回记忆、不访问数据库、不选择模型、不执行工具、不读取其他节点的完整 transcript，也不把 Tool schema重复写进
 文本。工具定义使用模型请求的原生 `tools` 字段传递。
@@ -175,6 +178,10 @@ Console 是只依赖可注入文本分派端口的本地终端前端：普通文
 工具 ID 使用来源稳定的域名，统一以 `aur.` 开头：框架内建使用 `aur.agent.<方法>`，服务使用
 `aur.serv.<服务名>.<方法>`，平台使用 `aur.<平台注册名>.<方法>`，MCP 使用
 `aur.mcp.<app_package>.<tool>`。节点只保存 ID 集合作为可见性事实，不保存执行器或定义副本；目录注册不等于节点授权。
+
+领域 Tool ID 不等于 Provider function name。OpenAI-compatible Provider 可能只接受 `[a-zA-Z0-9_-]` 且有长度上限；adapter
+必须为本次请求中的领域 Tool ID 生成稳定、协议安全且无冲突的别名，在 Tool definitions 和历史 assistant Tool calls 中统一
+使用别名，并在模型响应进入 `ChatMessage` 前反向映射为领域 ID。Provider 别名不得进入 AgentTree、ToolRegistry 或配置。
 
 `aur.agent.delegate` 是注册表中的真实 Tool，与其他工具通过同一 `Tool` 契约暴露定义并接受调用。它由不可变
 AgentDefinition 目录构造原生 schema，使 `agent` 参数列出所有 definition id 及其用途说明；调用只携带目标 `agent` 和局部
@@ -252,13 +259,13 @@ OperationSpec 目录的独立适配器，不得反向侵入操作处理器。
 项目配置按职责拆成 `runtime.toml`、`engine.toml`、`agents.toml`、`models.toml`、
 `prompts.toml`、`apps.toml`、`platforms.toml`、`extensions.toml`、`logging.toml` 和 `storage.toml`；环境 profile 位于
 `profiles/<name>.toml`，提示词正文位于 `prompts/`。`runtime.tree` 只保存 root node id 和 root AgentDefinition id；
-`agents.toml` 定义全部可实例化 Agent 的 description、profile、model、tools 和 children；`engine.tree`、`prompts.toml` 与
-`models.toml` 分别提供树上限、profile prompt 和 model endpoint。组合时必须拒绝重复 definition id，以及不存在的 root、
-child、profile、model 或 Tool 引用。`runtime.console` 决定默认是否启动本地终端。其余配置作为已注册的只读项目事实进入
+`agents.toml` 定义全部可实例化 Agent 的 description、prompt、model、tools 和 children；`engine.tree`、`prompts.toml` 与
+`models.toml` 分别提供树上限、prompt 正文和 model endpoint。组合时必须拒绝重复 definition id，以及不存在的 root、
+child、prompt、model 或 Tool 引用。`runtime.console` 决定默认是否启动本地终端。其余配置作为已注册的只读项目事实进入
 `AuroraConfig`，直到对应运行包出现真实用例。
 
-`models.toml` 的角色键是节点显式保存和 `ModelRequest` 显式携带的 model endpoint id；每个 endpoint 固定指向一个 provider
-和协议 model 名称。Provider 不从 profile 推导 endpoint。密钥字段只声明环境变量名，真实密钥只在调用时从环境变量读取。
+`models.toml` 的 `models.endpoints` 键是节点显式保存和 `ModelRequest` 显式携带的 model endpoint id；每个 endpoint 固定指向
+一个 provider 和协议 model 名称。Provider 不从 prompt 或 AgentDefinition 推导 endpoint。密钥字段只声明环境变量名，真实密钥只在调用时从环境变量读取。
 当前模型效果统一经过 LiteLLM 网关：`litellm` adapter 使用显式 `provider/model`，`openai_compatible` adapter 使用
 `openai/model + api_base`。两者共用 Chat Completions 消息与 Tool 映射，不建立绕过网关的直连客户端；其他 adapter 启动即
 失败，不进行隐式兼容猜测。
@@ -300,7 +307,7 @@ AgentTree 的显式导入/导出适配器验证，不把存储细节加入节点
 2. assistant Tool call 可获得 tool 结果并继续到最终 assistant；
 3. `aur.agent.delegate` 与其他 Tool 一样存在于注册表和模型请求的原生 tools 字段中；其 call 可创建 child，child 完成后正确
    恢复 parent，最终完成 root；engine 不按该工具名分派；
-4. root 与 child 都从预定义 AgentDefinition 创建；两个定义可以共享 profile 而使用不同 model/tools，delegate 只能选择
+4. root 与 child 都从预定义 AgentDefinition 创建；两个定义可以共享 prompt 而使用不同 model/tools，delegate 只能选择
    parent allowlist 内的 child definition；
 5. PromptAssembler 只产生 system、message、assistant、tool 四种领域 role，Provider adapter 单独测试 message → user 映射；
 6. 非法树、非法角色顺序、重复或错配 call id、越界上下文都在效果发生前失败；
