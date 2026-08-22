@@ -18,8 +18,8 @@ order: 10
 
 ## 2. 当前范围
 
-AuroraBot 是以 AgentTree 为运行聚合根的自主智能体框架。当前实现包含完整最小循环、项目级配置与组合、统一操作目录、
-本地 Console 和进程启动入口，不包含部署、故障恢复、运维面板或第三方扩展生态。
+AuroraBot 是以 Bot 为主体、以 AgentTree 为一次认知运行的自主智能体框架。当前实现包含完整最小循环、项目级配置与组合、
+统一操作目录、本地 Console、进程启动入口，以及持久化世界提交日志；不包含部署、主动节律、运维面板或第三方扩展生态。
 
 最小循环只有五个基本概念：
 
@@ -33,6 +33,7 @@ AuroraBot 是以 AgentTree 为运行聚合根的自主智能体框架。当前�
 
 ## 3. 设计原则
 
+- **Bot 拥有世界与森林**：Bot 持有追加式世界提交与多棵 AgentTree；一棵树只是一次运行，不是 Bot 本身。
 - **一棵树就是一次运行**：不再用 Task、mailbox、Activity 和 continuation 的组合间接表达一次 Agent 运行。
 - **节点同构**：root 与 child 使用同一种节点、消息和循环；实例差异只来自 system prompt、可见工具、初始 message 和
   使用的 LLM model。
@@ -83,8 +84,11 @@ prompt id、model endpoint id、可见 Tool ID 集合和允许委派的 child de
    definition 目录变化不反向改写已有树；
 9. root definition 由 runtime 入口显式选择；child definition 必须位于 parent definition 的 child allowlist 中。
 
-首版实现使用内存中的不可变值对象。持久化不是核心契约；未来若加入存储，必须保存和恢复同一 `AgentTree` 语义，不能发明
-第二套运行模型。
+节点还保存其已观察的 `WorldFrontier`。child 从 parent 创建时复制 parent 的 frontier，之后独立推进；一个节点观察过的
+世界事实不得隐式视为其他节点已经观察。
+
+`AgentTree` 仍是内存中的不可变值对象。世界日志保存 Bot 的跨树事实，不保存或替代 AgentTree；未来导入/导出树时必须保存
+同一树语义，不能发明第二套运行模型。
 
 ## 5. 四角色消息
 
@@ -130,7 +134,26 @@ AgentTree。
 首版不做自动裁剪和摘要；超过显式字符上界时立即失败，让上下文策略保持可见。记忆只能作为产生 message 或 system
 片段的上游能力加入，不能隐藏在组装器内部。
 
-## 7. 完整最小循环
+## 7. 世界提交与观察前沿
+
+Bot 的环境事实、工具请求与工具结果、root 对外发布都进入同一个只追加的 `WorldJournal`。一条 `EnvironmentEvent` 至少包含
+稳定 event id、source、scope、kind、发生时间、面向模型的 summary 和结构化 data。提交可以归属多个 scope；每个 scope 有独立
+单调 sequence。`WorldFrontier` 是 scope 到 sequence 的不可变映射，不相关 scope 的新提交不得互相阻塞。
+
+Tree 只基于已经披露给其 node 的 frontier 推理。环境适配器只提供有界提交索引，不能替 Bot 按语义筛选消息；当前 delta
+只交付索引，按提交读取正文是后续独立 Tool 的扩展点。索引超过上界时分页交付，未披露页面不得被记为已观察。
+
+任何 assistant Tool batch 和 root 的最终文本都必须先提交检查：有未披露 delta 时，整个 batch 不执行，所有 Tool call 获得
+配对的 deferred tool 结果；root draft 以普通 message 收到 delta。node 看完全部页面后的下一次 Tool batch 或 root 文本，
+就是 Bot 明确选择以当前 observed frontier 为本次行动截面；随后到达的提交与该行动并发，不自动使它饥饿。接受的 Tool batch
+先原子记录 `tool.requested`，执行后记录 `tool.succeeded` 或 `tool.failed`；root 文本记录 `output.requested` 和
+`output.committed` 后才完成树。
+
+提交记录 tree id、node id、可选 tool call id 和 based-on frontier。框架只保证事实披露、因果、授权、参数与资源边界；消息
+是否相关、是否等待、是否回复以及是否以某个 frontier 行动，都由 Bot 决定。主动节律是未来可启用能力，当前不得因时钟或应用
+被发现而自动启动。
+
+## 8. 完整最小循环
 
 一次 tree turn 严格遵循：
 
@@ -139,12 +162,14 @@ AgentTree。
   → PromptAssembler.assemble(tree, node)
   → Model.complete(messages, tools)
   → 追加 assistant
-      ├─ 无 Tool call：完成 node
-      │    ├─ root：完成 tree
-      │    └─ child：向 parent 追加 tool，唤醒 parent
-      └─ 有 Tool call：逐个执行
-           ├─ ToolOutput：追加 tool 结果
-           └─ DelegationRequest：创建 child，parent 等待 child
+      ├─ 无 Tool call：检查已观察 scope 的 delta
+      │    ├─ 有 delta：追加 message，下一次文本显式封口
+      │    └─ 无 delta / 已封口：完成 node；child 向 parent 追加 tool，root 发布输出后完成 tree
+      └─ 有 Tool call：解析各 Tool scope 并检查合并 delta
+           ├─ 有 delta：整批追加 deferred tool 结果，下一批显式封口
+           └─ 无 delta / 已封口：原子记录全部 tool.requested，再依序执行
+                ├─ ToolOutput：记录结果并追加 tool 消息
+                └─ DelegationRequest：创建 child，parent 等待 child
   → 仍有 ready node 时继续
 ```
 
@@ -154,12 +179,13 @@ AgentTree。
 模型失败使当前节点失败；Tool 失败生成普通 tool 错误消息，由模型决定如何继续。child 失败同样作为 delegate call 的 tool
 错误返回 parent。运行时不伪造模型回复、不自动重试，也不把空文本改写成完成消息。
 
-## 8. 最小端口
+## 9. 最小端口
 
-核心只有两个效果端口：
+认知循环有两个效果端口，并通过一个 Bot 级事实端口获得因果边界：
 
 - `Model.complete(request) -> AssistantMessage`，其中 request 显式携带 node 的 model id；
 - `Tool.execute(call) -> ToolResult`，其中当前结果只有普通 `ToolOutput` 和树操作 `DelegationRequest` 两种。
+- `WorldJournal` 只追加环境、Tool 与输出提交，并按 scope 提供 head 与有界 delta；它不保存 AgentTree。
 
 Provider、Console、MCP、定时器和未来平台都是这两个端口之外的适配器或 message 来源。首版不定义 InputGateway、
 EventSource、ControlAction、ContextContributor、OutputSink、Projector、Manifest 或 Lifecycle 公共体系。
@@ -193,7 +219,7 @@ schema、参数解析、保留名或单独路由分支。项目组合的 `aurora
 当前不建立旧工具活动、异步回执、AMP、恢复队列、动态重绑定、生命周期或多级 catalog。将来若真实异步工具需要这些语义，
 必须继续让模型只看到同一个工具 ID/definition 目录，并保持 Tool call 到一次规范化 tool 消息的对应关系。
 
-## 9. 包边界
+## 10. 包边界
 
 当前最小包结构：
 
@@ -206,18 +232,20 @@ schema、参数解析、保留名或单独路由分支。项目组合的 `aurora
 | `src/tools` | 不可变工具注册表、统一路由与框架内建工具 | contracts、agents |
 | `src/engine` | AgentTree 的确定性最小循环 | contracts、agents、prompt、tools |
 | `src/ai` | LiteLLM 模型网关与 OpenAI-compatible 协议映射 | contracts、litellm |
+| `src/world` | SQLAlchemy WorldJournal、ORM 模型与版本迁移 | contracts、SQLAlchemy、aiosqlite |
 | `src/console` | 本地异步终端与终端控制 DTO | 标准库、prompt-toolkit |
 | `ops` | 热路径外的操作资源树、运行监测与显式改动入口 | 标准库、tomlkit |
 | `aurora` | 项目配置、分阶段组合根、项目 runtime 与 CLI | 所有下层包 |
 
-依赖方向固定为 `utils/contracts ← agents/prompt/ai ← tools ← engine ← aurora`，`console ← aurora`，`ops ← aurora`；ops 与 src 互不导入。核心不依赖配置加载器、
-数据库、Web 框架、MCP SDK 或具体 Provider。`src` 不导入 `aurora` 或 `ops`。
+依赖方向固定为 `utils/contracts ← agents/prompt/ai/world`、`agents/contracts ← tools ← engine ← aurora`，`console ← aurora`，
+`ops ← aurora`；ops 与 src 互不导入。除 `src.world` 外的认知核心不依赖配置加载器、数据库、Web 框架、MCP SDK 或具体
+Provider。`src` 不导入 `aurora` 或 `ops`。
 
 `ops` 保留统一操作体系的标准设计：一个 `OperationSpec` 同时描述 method/path 资源入口和斜杠文本入口，参数只解析一次，
 处理器统一返回 `OperationResult`。操作按领域模块显式注册，目录可自描述。它只经组合根注入的窄端口观察或请求改动：
 
-- 运行监测读取当前及已完成的 AgentTree、节点、状态和 transcript 投影；
-- 运行改动只能请求 AuroraRuntime 发起一棵新树，不直接替换节点或追加消息；
+- 运行监测读取当前及已完成的 AgentTree、节点、状态和 transcript 投影，以及指定 scope 的有界世界提交索引；
+- 运行改动只能请求 AuroraRuntime 发起一棵新树或提交一条环境事实，不直接替换节点或追加消息；提交环境事实不会自动启动树；
 - 配置监测读取 `AuroraConfig` 的注册目录和个人 TOML；
 - 配置改动当前只允许切换 `apps.toml` / `extensions.toml` 中既有条目的 `enabled`，保留注释，并在值发生变化时返回
   `restart_required = true`；不得修改 `config.example/`；
@@ -226,8 +254,8 @@ schema、参数解析、保留名或单独路由分支。项目组合的 `aurora
 当前 ops 是适配器中立的核心，不包含 HTTP 服务、Panel 认证、附件、WebSocket、数据库或前端 Lab；这些都是以后消费同一
 OperationSpec 目录的独立适配器，不得反向侵入操作处理器。
 
-`src.utils` 只保留没有上层包依赖的通用实现。当前不包含 SQLAlchemy migration、uvicorn server 包装或其他已移除子系统的
-辅助代码。项目配置加载、子进程命令等组合层工具仍属于
+`src.utils` 只保留没有上层包依赖的通用实现。WorldJournal 的 SQLAlchemy ORM 与迁移只归 `src.world` 所有；项目配置加载、
+子进程命令等组合层工具仍属于
 `aurora.utils`，不得下沉后让 `src` 反向理解项目目录。
 
 `aurora` 虽不属于认知核心，仍保留以下必要的增长边界：
@@ -237,7 +265,7 @@ OperationSpec 目录的独立适配器，不得反向侵入操作处理器。
 - `aurora.configuration`：每个 TOML 文件对应一个同名 Python 模块；模块定义自己的纯配置值、解析器和注册函数；
 - `aurora.composition`：每个需要项目实例的 `src` 子包对应一个同名 Python 模块；模块声明自己需要的实例并注册构造结果；
   其中 agents 模块先从纯配置构造 AgentDefinition 目录，tools 模块再用该目录构造 `aur.agent.delegate` 并与外部注入工具组成
-  唯一注册表，engine 模块消费两个目录并完成跨目录引用校验；
+  唯一注册表，world 模块按 `storage.toml` 构造 WorldJournal，engine 模块消费三个实例并完成跨目录引用校验；
 - `aurora.config`：按配置目录的显式注册顺序加载全部 TOML，并合并为一个只读 `AuroraConfig`；
 - `aurora.composer`：为分阶段组合提供类型化实例键、构造上下文和只读结果，不知道具体 `src` 子包；
 - `aurora.runtime`：调用全部组件注册函数，并从组合结果取得最终 runner 和项目入口配置。
@@ -251,7 +279,7 @@ OperationSpec 目录的独立适配器，不得反向侵入操作处理器。
 和读取尚未注册的依赖都立即失败。配置值不直接使用 PromptCatalog、AgentTreeRunner 等实现期对象；从配置形状到运行对象的
 转换只发生在 composition。只提供契约或纯函数、无需项目实例的 `src` 子包不需要空的 composition 模块。
 
-## 10. 配置与存储
+## 11. 配置与存储
 
 核心值对象可直接由 Python 构造。`config.example/` 是随源码发布的完整配置模板；用户将其复制为 `config/` 后形成个人生效
 配置。`config/` 必须被 Git 忽略，运行时和 `aurora config` 只读取它，不隐式回退到模板，也不把个人修改写回源码。
@@ -276,10 +304,11 @@ child、prompt、model 或 Tool 引用。`runtime.console` 决定默认是否启
 模板与个人目录保持相同拓扑。每个 TOML 只由同相对路径的 configuration 模块解析；通用加载器不包含文件名、字段名或具体
 配置类型分支。新增结构配置时，增加一个模板 TOML、一个同路径 configuration 模块和一条注册记录。密钥只来自环境变量。
 
-当前不定义运行时数据库、schema 版本、迁移、会话归档、费用库、记忆库或面板存储。需要持久化时，先以完整
-AgentTree 的显式导入/导出适配器验证，不把存储细节加入节点契约。
+`storage.toml` 的 `storage.data_root` 与 `storage.world` 共同确定 WorldJournal SQLite 文件路径。WorldJournal 维护单行
+schema version；首版为 v1，后续每次 schema 改动必须提供 `vN → vN+1` SQLAlchemy migration 并更新版本。它只保存世界提交，
+不归档 AgentTree，也不把数据库对象泄漏进节点契约。会话归档、费用库、记忆库与面板存储仍未定义。
 
-## 11. 当前范围之外
+## 12. 当前范围之外
 
 当前实现不包含：
 
@@ -290,12 +319,12 @@ AgentTree 的显式导入/导出适配器验证，不把存储细节加入节点
 - 七类贡献端口、manifest、面向第三方的扩展注册表和生命周期装配；
 - Panel 后端、认证、附件和 WebSocket；
 - MCP 进程管理、应用目录、sandbox 和生产化日志设施；
-- SQLite 历史 schema 与迁移链、故障恢复、租约、抢占、并发和费用统计；
+- WorldJournal 之外的持久化、故障恢复、租约、抢占、并发和费用统计；
 - 为上述能力存在的结构配置与测试。
 
 这些能力进入当前实现前，必须围绕稳定的 AgentTree 提供真实用例、清楚的不变量和独立测试。
 
-## 12. 质量与验收
+## 13. 质量与验收
 
 - Python 3.12；使用 uv；Ruff 行宽 120、LF、双引号；公开 API 有类型注解；值对象优先 frozen + slots dataclass。
 - 主源码文件不超过 500 行；核心代码不通过 lint ignore 隐藏复杂度。
@@ -311,7 +340,7 @@ AgentTree 的显式导入/导出适配器验证，不把存储细节加入节点
    parent allowlist 内的 child definition；
 5. PromptAssembler 只产生 system、message、assistant、tool 四种领域 role，Provider adapter 单独测试 message → user 映射；
 6. 非法树、非法角色顺序、重复或错配 call id、越界上下文都在效果发生前失败；
-7. fake Model 与 fake Tool 可在无网络、无数据库、无环境变量时跑通全部测试；
+7. 除 WorldJournal 的临时 SQLite 集成测试外，fake Model 与 fake Tool 可在无网络、无环境变量时跑通测试；
 8. 当前 Python runtime 不再导入第 11 节已移除的生产化子系统，活动架构文档不再把它们描述为现行能力。
 9. fake Model 下可通过 Console 完成普通文本 → AgentTree → assistant → 终端输出，并通过斜杠操作查询状态和停止进程；
 10. `aurora start --headless` 与 Console 模式共享同一组合和停止路径，测试不依赖网络、密钥或真实终端。
