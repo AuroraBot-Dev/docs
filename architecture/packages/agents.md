@@ -31,7 +31,9 @@ order: 4
 ## 组合
 
 - 实例键：`AGENTS = InstanceKey[AgentCatalog]("agents.catalog")`；
-- 在 `world.register` 之后注册，供 tools 与 engine 依赖。
+- 纯 AgentCatalog 可在 `world.register` 之后构造，供 tools 与 engine 依赖；
+- `tools` 字段的跨目录引用必须等全部 MCP App 完整发现、最终 ToolRegistry 冻结后由 engine 组合阶段校验；
+- 未发现、重复或非法的 MCP Tool ID 与 builtin Tool 引用一样使启动失败，不做通配、静默删除或运行时补绑。
 
 ## 世界访问权
 

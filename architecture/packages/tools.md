@@ -20,16 +20,29 @@ src/tools/
     world.py        # aur.serv.world.read / aur.serv.world.trees
 ```
 
-`builtin_tools(agents=..., journal=...)` 是内置目录的显式汇总入口，组合根把外部注入工具追加到同一
-`ToolRegistry`。新增工具时按“一个模块 + 一条 builtin 记录”加入即可。
+`builtin_tools(agents=..., journal=...)` 是内置目录的显式汇总入口。组合根先让全部启用 MCP App 完整发现，随后把冻结的
+MCP Tool 快照、其他外部注入 Tool 与 builtin 一次性合并为同一 `ToolRegistry`。新增 builtin 时仍按“一个模块 + 一条记录”加入。
 
 ## 职责
 
 - 校验 `aur.*` 工具 ID 与重复注册；
 - 提供完整名称集合，并按节点可见集合筛选原生 definitions；
-- 唯一执行路由，把未知工具、执行异常、非法返回值规范化为失败的 `ToolOutput`；
+- 唯一执行路由，把未知工具、执行前异常、非法返回值规范化为 failed `ToolOutput`，保留执行器显式返回的 unknown；
 - `ScopedTool.resolve_scopes(call)`：由每个工具声明本次调用的观察与发布 scope；
 - 外部工具域经 `assemble_runtime(config, model, tools=...)` 注入，与 builtin 在组合根合并。
+
+## MCP 与冻结边界
+
+- raw name 与 App package 组合为 `aur.mcp.<package>.<raw_name>`，registry 不替 MCP 静默改名；
+- 全部 App 完整分页 `tools/list` 后才允许构造 registry，并在构造时拒绝跨来源冲突；
+- registry 构造后不可变；`tools/list_changed` 只使 MCP 状态显示 `restart_required=true`；
+- 当前没有 reload、hot replace 或自动重连后的目录重绑定；断线只改变执行可用性，不改变 definition；
+- MCP Tool 仍实现同一个 `Tool.execute`，不经过 AMP、Activity、异步回执或第二套路由。
+
+## ToolOutput 三态
+
+`succeeded`、`failed` 与 `unknown` 都是正常的 Tool 返回值。unknown 表示效果不确定，必须原样交给 engine；registry 只把
+确定发生在调用前的本地异常归为 failed，不能自动重试或猜测远端效果。
 
 ## 世界访问权
 

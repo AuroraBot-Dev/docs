@@ -27,7 +27,7 @@ order: 3
 1. **scope 由提交方决定**：`WorldCommitInput.scopes` 非空；world 不推断、不改写。
 2. **kind 与 source 由提交方决定**：world 不按字符串分支。
 3. **commit_id 由提交方决定**：可重放事件必须使用确定 ID；一次性事实允许随机 ID。
-4. **世界不产生事件**：tick、input、config 变更等事件由 console / cadence / ops 等生产者提交。
+4. **世界不产生事件**：tick、input、config 变更与 MCP 外部事实由 console / cadence / ops / mcp 等生产者提交。
 
 ## 当前事件 kind
 
@@ -38,10 +38,13 @@ order: 3
 | `engine.tree.started` / `completed` / `failed` | engine | `aurora:tree:<id>` |
 | `engine.node.spawned` / `completed` / `failed` | engine | `aurora:tree:<id>` |
 | `engine.model.requested` / `completed` / `failed` | engine | `aurora:tree:<id>` |
-| `tool.requested` / `succeeded` / `failed` | engine | `aurora:tree:<id>` + 工具 publish |
+| `tool.requested` / `succeeded` / `failed` / `unknown` | engine | `aurora:tree:<id>` + 工具 publish |
 | `output.requested` / `committed` | engine | `aurora:tree:<id>` |
 | `engine.world.delta_delivered` | engine | `aurora:tree:<id>` |
 | `cadence.tick` / `tree_planned` / `tree_failed` | cadence | `aurora:cadence` |
+| `mcp.app.starting` / `ready` / `failed` / `disconnected` | mcp | `aurora:mcp:<package>` |
+| `mcp.catalog.frozen` / `changed` | mcp | `aurora:mcp:<package>` |
+| `mcp.event.received` | mcp | 载荷业务 scope，可附加 `aurora:mcp:<package>` |
 | `ops.config.changed` | ops | `aurora:config` |
 | `ops.tree.requested` / `ops.process.shutdown_requested` | ops | `aurora:system` |
 
@@ -55,3 +58,5 @@ order: 3
 - 不导入 engine、agents、tools、prompt、ai、console、aurora 或 ops；
 - 不保存 AgentTree 快照，不承担运行时状态权威；
 - 不做实时推送；消费者按游标或 frontier 拉取。
+- MCP 适配器负责拒绝伪造 `engine.*`、`tool.*`、`output.*`、`cadence.*` 与 `ops.*` 的外部载荷；world 仍只校验、编号和追加。
+- MCP 事件只增加世界事实，不直接写 AgentNode transcript、完成 Tool call 或启动 AgentTree。

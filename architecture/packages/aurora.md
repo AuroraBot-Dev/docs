@@ -1,5 +1,5 @@
 ---
-order: 13
+order: 14
 ---
 
 # aurora
@@ -20,7 +20,21 @@ aurora/
   utils/           子进程、TOML 字段等无项目语义工具
 ```
 
-## 组合顺序
+## 启动与组合顺序
+
+组合根先拥有异步效果边界：
+
+```text
+加载纯配置
+  → 初始化唯一 WorldJournal
+  → 启动全部 enabled MCP App
+  → SDK 2.x 自动协商（2026-07-28 优先，旧修订兼容）
+  → 完整分页 tools/list
+  → 冻结 MCP Tool 快照
+  → 执行同步 composition
+```
+
+同步注册顺序：
 
 ```python
 COMPOSITION_REGISTRARS = (
@@ -39,17 +53,24 @@ COMPOSITION_REGISTRARS = (
 - `CompositionContext.provide` 拒绝重复实例键：`world.journal` 是全局单例；
 - `require` 读取尚未注册的依赖立即失败：顺序即契约；
 - `AuroraRuntime` 持有该 world 实例，并向 console 注入 `WorldWriter`、向 engine 注入 `WorldJournal`。
+- tools.register 一次性合并 builtin、调用方外部 Tool 与冻结 MCP Tool；engine.register 随后校验全部 AgentDefinition 引用。
+- 任一启用 App 发现失败时，逆序关闭已建立连接和 stdio 子进程，不构造最终 runner。
 
 ## 生命周期
 
-- `assemble_runtime()`：配置 → 组合 → `AuroraRuntime`；
-- `run_project()`：`await runtime.world.initialize()` 一次；`cadence.enabled = true` 时创建节律后台任务；再进入 Console 或 headless 停止等待；
+- 异步 assembly：配置 → world 初始化 → MCP 完整发现 → 同步组合 → `AuroraRuntime`；
+- `run_project()`：只有 registry 冻结和跨目录校验成功后才开放 Console/AgentTree；`cadence.enabled = true` 时再创建节律后台任务；
+- 关闭顺序先停止 cadence/Console 与新的 AgentTree 输入，再关闭 MCP 连接和 stdio 子进程，最后关闭 WorldJournal；
+- 运行中不 reload、不热替换 MCP Tool、不自动重连；目录变化或断线只更新状态并要求重启；
 - SIGINT / SIGTERM / EOF / `/exit` 汇聚到同一停止事件。
 
 ## ops 端口
 
 `AuroraRuntime` 实现 `TreeRuntimePort / ConfigRuntimePort / ProcessRuntimePort` 以及
-`Agents/Tools/Prompt/Ai/World/Console/Cadence/Memory/Utils/ContractsRuntimePort`，在 `__post_init__` 注入 `OpsRuntime`。
+`Agents/Tools/Prompt/Ai/World/Console/Cadence/Memory/Mcp/Utils/ContractsRuntimePort`，在最终 assembly 后注入 `OpsRuntime`。
+
+这里没有通用 Platform 组合：MCP 是一个明确的协议适配包。组合根不接受 PlatformHandle、Manifest、AMP、Task、Activity 或
+七类贡献端口，也不向 MCP sampling、elicitation、roots 或 Tasks 提供旁路认知能力。
 
 ## CLI
 

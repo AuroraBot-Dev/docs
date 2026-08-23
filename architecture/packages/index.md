@@ -19,8 +19,9 @@ order: 1
 | [engine](./engine.md) | AgentTree 确定性执行器 | `WorldJournal` | `engine.runner` | `GET/POST /trees`、`POST /events`、`GET /world/{scope}`、`GET /forest` | 已实现 |
 | [memory](./memory.md) | 世界线驱动的简化记忆 | `WorldReader` | `memory.reader` | `GET /memory` | 已实现 |
 | [cadence](./cadence.md) | 世界驱动唤起 AgentTree 的策略 | `WorldReader` + `WorldWriter` | `cadence.runtime` | `GET /cadence`、`POST /cadence/trigger` | 已实现 |
+| [mcp](./mcp.md) | MCP SDK 2.x 协议适配与冻结工具目录 | `WorldWriter` | 启动发现结果 + `mcp.runtime` | `GET /mcp`、`GET /mcp/{package}` | 已实现 |
 | [ops](./ops.md) | 统一操作目录 | 经注入端口，不直接持有 | `runtime.ops` | `GET /` 自描述 | 已实现 |
 | [aurora](./aurora.md) | 项目组合根与运行时门面 | 持有并分发唯一单例 | 组合结果 | CLI + 全部 ops 端口 | 已实现 |
-| [extensions](./extensions.md) | MCP / sandbox 等未来扩展 | 按角色授予 | 按基线注册 | 按基线注册 | 规划 |
+| [extensions](./extensions.md) | sandbox 等未来扩展 | 按角色授予 | 按基线注册 | 按基线注册 | 规划 |
 
 新增包之前必须先读 [新包扩展基线](./package-baseline.md)。

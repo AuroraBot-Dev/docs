@@ -13,6 +13,8 @@ AgentTree 的确定性执行器。engine 只负责把一棵已经决定的树跑
 - delegate 结果只按 `DelegationRequest` 应用树操作，并按 parent allowlist、深度、节点数校验；
 - 在 Tool batch 与 root draft 前检查世界 delta，未披露时先交付并显式封口；
 - 通过 `WorldJournal` 记录一棵树的完整因果链。
+- 把 ToolOutput 的 succeeded / failed / unknown 三态写成配对 tool 消息；unknown 不降格、不重试；
+- 不消费 MCP SDK 类型；MCP 业务事件只作为 World delta 到达节点。
 
 ## 世界事件
 
@@ -23,7 +25,7 @@ engine 以确定性 commit id 提交（节选）：
 | 树启动 / 完成 / 失败 | `engine.tree.started / completed / failed` |
 | 节点创建 / 完成 / 失败 | `engine.node.spawned / completed / failed` |
 | 模型请求 / 完成 / 失败 | `engine.model.requested / completed / failed` |
-| 工具请求 / 成功 / 失败 | `tool.requested / succeeded / failed` |
+| 工具请求 / 成功 / 失败 / 未知 | `tool.requested / succeeded / failed / unknown` |
 | root 输出请求 / 发布 | `output.requested / committed` |
 | 世界 delta 交付 | `engine.world.delta_delivered` |
 
@@ -44,11 +46,12 @@ class TreeLaunchRequest:
 ```
 
 交互式 `/run` 与后台 cadence 唤起都落到 `engine.run` 同一入口。
+MCP 事件提交本身不会调用该入口；只有 cadence 可以基于世界流决定产生 TreeLaunchRequest。
 
 ## 组合
 
 - 实例键：`ENGINE_RUNNER = InstanceKey[AgentTreeRunner]("engine.runner")`；
-- 依赖 agents、prompt、tools、ai 与 world 单例；
+- 依赖 agents、prompt、已冻结 tools、ai 与 world 单例；MCP 完整发现和 AgentDefinition Tool 引用校验必须先完成；
 - 观察回调只向组合根发布不可变 AgentTree 快照。
 
 ## ops 入口

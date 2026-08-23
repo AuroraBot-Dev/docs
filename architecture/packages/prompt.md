@@ -19,7 +19,7 @@ order: 6
 - 记忆由 `src/memory` 的 `WorldReader` 查询，由 engine 在模型请求前召回并传入；
 - 记忆以“最近一小时的世界活动”片段注入唯一 system 消息，不写 transcript；
 - 世界更新本身仍由 engine 以显式 delta message/tool 结果送入 transcript，保证模型看到的事实有审计路径；
-- 若未来 prompt 直接读取世界，必须只依赖 `WorldReader`、显式使用节点 `observed_frontier`，并保持确定性可重放。
+- PromptAssembler 不直接读取世界或 MCP；新的世界事实仍须先进入 WorldJournal，再由 engine 依 frontier 披露。
 
 ## 组合
 

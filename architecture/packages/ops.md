@@ -1,5 +1,5 @@
 ---
-order: 12
+order: 13
 ---
 
 # ops
@@ -28,13 +28,14 @@ ops/
     console.py
     cadence.py
     memory.py
+    mcp.py
     utils.py
     contracts.py
 ```
 
 ## 每个包的窄端口
 
-`OpsPorts` 汇总 `engine / config / process / agents / tools / prompt / ai / world / console / cadence / memory / utils / contracts`。新增包时：
+`OpsPorts` 汇总 `engine / config / process / agents / tools / prompt / ai / world / console / cadence / memory / mcp / utils / contracts`。新增包时：
 
 1. 在 `ops/contracts.py` 增加 `<Pkg>RuntimePort` Protocol 和 `OpsPorts` 字段；
 2. `AuroraRuntime` 实现该端口，并在构造 `OpsRuntime` 时注入；
@@ -57,6 +58,7 @@ ops/
 | console | `GET /console` | 无（输入来自终端循环本身） |
 | cadence | `GET /cadence` | `POST /cadence/trigger` |
 | memory | `GET /memory` | 无（只读快照） |
+| mcp | `GET /mcp`、`GET /mcp/{package}` | 无（状态只读，无 reload/hot replace） |
 | utils | `GET /utils` | 无（纯工具能力清单） |
 | contracts | `GET /contracts` | 无（公共值对象与端口清单） |
 
@@ -65,6 +67,9 @@ ops/
 ops 不直接持有 world，而是通过 `WorldRuntimePort.record_event` 提交已确定 scope 的事实：config 变更写入
 `ops.config.changed`（scope `aurora:config`），`POST /trees` 写入 `ops.tree.requested`，shutdown 写入
 `ops.process.shutdown_requested`（scope `aurora:system`）。纯读操作不产生世界提交。
+
+`McpRuntimePort` 只投影 App 的 configured/connected 状态、negotiated protocol version、冻结工具数量、最后错误与
+`restart_required`。ops 不持有 MCP session，不提供 reload、reconnect 或目录替换动作；App enabled 修改仍只改 TOML 并要求重启。
 
 ## 边界
 

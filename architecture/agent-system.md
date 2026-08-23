@@ -15,6 +15,10 @@ order: 2
 接在其后。assistant 无 Tool call 时节点完成；普通 Tool call 返回 tool 消息；delegate call 创建 child。child 完成或失败后，
 parent 获得同一 delegate call id 的 tool 消息并恢复。
 
+普通 Tool 的一次结果具有 `succeeded`、`failed` 或 `unknown` 三种状态。`unknown` 表示请求可能已送达但真实效果无法确认，
+仍必须形成同一 call id 的 tool 消息；engine 记录 `tool.unknown`，且不得自动重试。MCP Tool 与 builtin Tool 使用完全相同的
+节点消息和结果路径。
+
 model 是节点一等事实。同一 prompt 的两个节点可以使用不同 LLM，Runner 和 Provider 不得从 prompt id 隐式推导 model。
 
 ## 世界观察前沿
@@ -29,7 +33,17 @@ engine 在以下位置把未披露 delta 作为显式 message/tool 结果交付�
 
 接受一个 batch 或 root draft 意味着 Bot 以当前 frontier 为行动截面；之后到达的提交与该行动并发，不会自动使它饥饿。
 
+MCP Server 上报的业务事件只追加 WorldJournal。它不会直接成为节点消息、恢复 waiting 节点或启动新树；engine 仍只按
+节点 frontier 显式披露世界 delta，是否主动唤起新树只由 cadence 决定。
+
+## 工具目录冻结
+
+启用的 MCP App 必须先由 SDK 2.x 完成协议协商与完整分页 `tools/list`。全部发现成功后，MCP Tool 与 builtin/外部注入 Tool
+合并并冻结为本进程唯一 ToolRegistry，随后才校验 AgentDefinition 的精确 Tool ID 引用并允许创建节点。运行中的目录变化
+不得改写 AgentDefinition 或已有 AgentNode；状态只报告 `restart_required`。
+
 ## 同构与特化
 
 workerAgent、memoryAgent、gateAgent 这类“具体 Agent”应表现为 `AgentDefinition` 预设（prompt + model + tools + children），
 而不是 `AgentNode` 的 Python 子类。特化行为优先实现为 Tool 或 prompt；只有证明无法由现有节点表达的新概念才允许进入核心。
+MCP sampling、elicitation、roots、Tasks 也不能成为隐藏 Agent 或独立运行模型。
