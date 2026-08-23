@@ -39,6 +39,7 @@ aurora/
 ```python
 COMPOSITION_REGISTRARS = (
     world.register,    # 世界单例第一个构造
+    mcp.register,      # 接收异步阶段已经冻结的 MCP runtime
     memory.register,   # 只读世界记忆
     cadence.register,  # 节律 + 唤起策略
     agents.register,

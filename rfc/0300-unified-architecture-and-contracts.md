@@ -279,7 +279,7 @@ MCP 成功结果优先把 `structuredContent` 确定性序列化为文本，否�
 transcript；适配器必须返回明确的不支持错误，直到未来内容契约先进入本 RFC。
 
 现代 MCP App 的业务事件使用版本化扩展 `org.aurorabot/world-events`，不使用已弃用的协议 logging 作为新设计。
-扩展必须经双方 capability 协商且在 App 配置中显式启用；载荷映射为
+扩展通知 method 固定为 `notifications/org.aurorabot/world-events/event`。扩展必须经双方 capability 协商且在 App 配置中显式启用；载荷映射为
 `EnvironmentEvent(event_id, source, scope, kind, occurred_at, summary, data)`。无稳定 event id、非法 scope/kind 或伪造保留事件的载荷必须拒绝；
 普通未协商 vendor notification 不自动成为业务事实。为迁移已有旧 Server，`apps.toml` 可对单个 App 显式开启受限的 legacy
 `notifications/message + logger=aurora/event` 转换；该兼容路径必须使用同样的载荷验证和世界提交边界，不得成为通用日志入口。
@@ -343,8 +343,8 @@ OperationSpec 目录的独立适配器，不得反向侵入操作处理器。
   `config show <name>` 只读取注册目录和源文件，不修改配置；
 - `aurora.configuration`：每个 TOML 文件对应一个同名 Python 模块；模块定义自己的纯配置值、解析器和注册函数；
 - `aurora.composition`：每个需要项目实例的 `src` 子包对应一个同名 Python 模块；模块声明自己需要的实例并注册构造结果；
-  其中 agents 模块先从纯配置构造 AgentDefinition 目录，tools 模块再用该目录构造 `aur.agent.delegate` 并与外部注入工具组成
-  唯一注册表；world 模块按 `storage.toml` 构造 WorldJournal 并作为第一个注册器提供单例，console 模块向 TerminalConsole
+  其中 agents 模块先从纯配置构造 AgentDefinition 目录，mcp 模块接收异步阶段已冻结的 MCP runtime，tools 模块再用该目录构造
+  `aur.agent.delegate` 并与外部注入工具、冻结 MCP Tool 组成唯一注册表；world 模块按 `storage.toml` 构造 WorldJournal 并作为第一个注册器提供单例，console 模块向 TerminalConsole
   注入同一单例的 `WorldWriter`，engine 模块消费模型、提示词、工具与世界实例并完成跨目录引用校验；
 - `aurora.config`：按配置目录的显式注册顺序加载全部 TOML，并合并为一个只读 `AuroraConfig`；
 - `aurora.composer`：为分阶段组合提供类型化实例键、构造上下文和只读结果，不知道具体 `src` 子包；
@@ -383,7 +383,8 @@ child、prompt、model 或 Tool 引用。`runtime.console` 决定默认是否启
 `apps.toml` 由同名 configuration 模块解析为类型化、不可变的 MCP App DTO，不再只保留原始 TOML。package 全局唯一。
 stdio App 必须声明 `working_dir + command`，不得声明 URL；Streamable HTTP App 必须声明 HTTPS URL，不得声明本地命令或工作目录。
 两者均支持 `enabled`、`timeout_seconds`、显式环境变量名白名单与事件模式；远程认证只使用 `auth_env`。协议首选版本与自动兼容策略是架构事实，
-不开放 TOML 选择另一 SDK 主版本。
+不开放 TOML 选择另一 SDK 主版本。为兼容已有个人配置，省略 `event_mode` 等价于安全的 `disabled`；启用现代扩展或受限 legacy
+转换仍必须显式填写对应模式。
 
 `platforms.toml` 只保存 MCP 总开关与终端诊断偏好，不由此恢复通用 Platform、Manifest 或七端口体系。App enabled、目录或 schema 变化只在
 重启后生效。`ops` 对现有 App 的 enabled 改动仍保留 TOML 注释，并返回 `restart_required=true`。

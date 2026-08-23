@@ -56,7 +56,8 @@ MCP 持有同一个 WorldJournal 的 `WorldWriter` 窄视角。生命周期与�
 - `mcp.catalog.frozen / changed`；
 - scope 为 `aurora:mcp:<package>`。
 
-业务事件优先使用协商后的版本化扩展 `org.aurorabot/world-events`。扩展必须在 App 配置中显式启用，载荷映射为
+业务事件优先使用协商后的版本化扩展 `org.aurorabot/world-events`，通知 method 固定为
+`notifications/org.aurorabot/world-events/event`。扩展必须在 App 配置中显式启用，载荷映射为
 `EnvironmentEvent(event_id, source, scope, kind, occurred_at, summary, data)`，再以 `mcp.event.received` 追加到载荷声明的
 业务 scope，并可附加 App scope。source 固定为 `mcp:<package>`。
 
@@ -75,6 +76,8 @@ MCP 事件只进入 WorldJournal，不直接追加节点 transcript、完成 Too
 - stdio：`package / enabled / transport / working_dir / command / env / timeout_seconds / event_mode`；
 - Streamable HTTP：`package / enabled / transport / url / auth_env / timeout_seconds / event_mode`；
 - package 全局唯一；两个 transport 的互斥字段在启动效果前校验。
+
+既有个人配置省略 `event_mode` 时按 `disabled` 读取；`world_events` 与 `legacy_aurora_event` 始终要求显式配置。
 
 `platforms.toml` 只保存 MCP 总开关和终端诊断偏好，不产生通用 Platform。组合根在 WorldJournal 初始化后启动 MCP，取得冻结
 Tool 快照，再进入 tools/engine 的同步组合阶段。
