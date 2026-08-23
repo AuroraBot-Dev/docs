@@ -30,7 +30,7 @@ order: 2
 ## Tool 三态
 
 - `succeeded`：执行器确认效果成功；
-- `failed`：参数拒绝、Server 明确错误或可确定效果未执行；
+- `failed`：参数/方法被明确拒绝，或执行器能确认效果未发生或已完整回滚；
 - `unknown`：请求可能已送达，但超时或断线使真实效果无法确认。
 
 三种状态都恰好形成一条配对 tool 消息。`unknown` 是一等因果事实，不得被 registry 或 engine 降格为 failed，也不得自动重试。

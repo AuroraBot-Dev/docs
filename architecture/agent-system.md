@@ -33,6 +33,9 @@ engine 在以下位置把未披露 delta 作为显式 message/tool 结果交付�
 
 接受一个 batch 或 root draft 意味着 Bot 以当前 frontier 为行动截面；之后到达的提交与该行动并发，不会自动使它饥饿。
 
+每个 MCP Tool 默认观察并发布 App scope；双方严格协商 `org.aurorabot/tool-contract` v1 后，可以用只引用顶层调用参数的
+scope 模板细化本次调用的 observe / publish 集合。模板仍通过普通 `ScopedTool` 进入这里的 frontier 屏障，不建立 MCP 旁路。
+
 MCP Server 上报的业务事件只追加 WorldJournal。它不会直接成为节点消息、恢复 waiting 节点或启动新树；engine 仍只按
 节点 frontier 显式披露世界 delta，是否主动唤起新树只由 cadence 决定。
 

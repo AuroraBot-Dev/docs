@@ -14,7 +14,8 @@ config.example/（源码模板） ──复制──→ config/（个人配置�
 
 异步启动边界：
   WorldJournal.initialize()
-    → MCP SDK 2.x 连接、自动协议协商、完整分页 tools/list
+    → MCP SDK 2.x 连接、自动协议协商
+    → 在单一启动截止时间内建立唯一目录监听、完整分页 tools/list
     → 冻结 MCP Tool 快照
 
 同步 composition（world 单例与已冻结 MCP Tool 作为输入）：
@@ -49,10 +50,16 @@ AgentTree 热路径：
            └─ DelegationRequest → child AgentNode
 
 MCP 外部事实：
-  negotiated world-events / 受限 legacy event
+  双方严格协商 v1 的 stdio world-events / 受限 legacy event
     → src/mcp 校验 EnvironmentEvent
     → WorldWriter.append_event
     → WorldJournal（不直接写 transcript，不直接启动 AgentTree）
+
+MCP Tool 因果：
+  默认 App scope / 协商 tool-contract v1 的顶层参数 scope 模板
+    → ScopedTool.resolve_scopes → engine frontier 屏障
+    → tools/call → succeeded / failed / result _meta unknown
+    → 同一 ToolOutput 与世界因果路径（不建立异步回执或第二套运行循环）
 ```
 
 ## 包边界一句话

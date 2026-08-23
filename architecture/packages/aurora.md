@@ -29,7 +29,7 @@ aurora/
   → 初始化唯一 WorldJournal
   → 启动全部 enabled MCP App
   → SDK 2.x 自动协商（2026-07-28 优先，旧修订兼容）
-  → 完整分页 tools/list
+  → 在 App 启动截止时间内建立唯一目录监听并完整分页 tools/list
   → 冻结 MCP Tool 快照
   → 执行同步 composition
 ```
@@ -56,6 +56,8 @@ COMPOSITION_REGISTRARS = (
 - `AuroraRuntime` 持有该 world 实例，并向 console 注入 `WorldWriter`、向 engine 注入 `WorldJournal`。
 - tools.register 一次性合并 builtin、调用方外部 Tool 与冻结 MCP Tool；engine.register 随后校验全部 AgentDefinition 引用。
 - 任一启用 App 发现失败时，逆序关闭已建立连接和 stdio 子进程，不构造最终 runner。
+- 启动期间的目录变化使当前分页作废，不能把已知过期目录交给同步组合；HTTPS 重定向不能降级到 HTTP。
+- `world_events` handler 只有在双方严格协商 v1 后才获得 WorldWriter 提交通路，当前 Streamable HTTP 配置不允许启用该模式。
 
 ## 生命周期
 

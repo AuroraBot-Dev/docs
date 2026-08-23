@@ -37,12 +37,17 @@ MCP Tool 快照、其他外部注入 Tool 与 builtin 一次性合并为同一 `
 - 全部 App 完整分页 `tools/list` 后才允许构造 registry，并在构造时拒绝跨来源冲突；
 - registry 构造后不可变；`tools/list_changed` 只使 MCP 状态显示 `restart_required=true`；
 - 当前没有 reload、hot replace 或自动重连后的目录重绑定；断线只改变执行可用性，不改变 definition；
-- MCP Tool 仍实现同一个 `Tool.execute`，不经过 AMP、Activity、异步回执或第二套路由。
+- MCP Tool 仍实现同一个 `Tool.execute` 与 `ScopedTool.resolve_scopes`，不经过 AMP、Activity、异步回执或第二套路由；
+- MCP Tool 默认 observe / publish App scope；双方严格协商 `org.aurorabot/tool-contract` v1 后，可以由 Tool `_meta`
+  声明只引用顶层调用参数的 scope 模板，发现时校验模板，调用前解析失败即在远端效果发生前 failed。
 
 ## ToolOutput 三态
 
 `succeeded`、`failed` 与 `unknown` 都是正常的 Tool 返回值。unknown 表示效果不确定，必须原样交给 engine；registry 只把
 确定发生在调用前的本地异常归为 failed，不能自动重试或猜测远端效果。
+
+协商后的 MCP `CallToolResult._meta` 可以显式声明 `status="unknown"`；适配器必须优先保留该状态。远端明确参数/方法拒绝或
+确认没有效果时才是 failed，内部超时、下游断线和其他可能已产生效果的错误不能降格。
 
 ## 世界访问权
 
