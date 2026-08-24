@@ -366,6 +366,13 @@ OperationSpec 目录的独立适配器，不得反向侵入操作处理器。
 子进程命令等组合层工具仍属于
 `aurora.utils`，不得下沉后让 `src` 反向理解项目目录。
 
+进程日志是运行诊断，不是世界事实：日志不得写入 WorldJournal、AgentNode transcript 或 Tool 结果，也不能替代已有的因果提交。
+`src.utils.logging` 提供唯一的非传播 logger、终端 handler 与轮转文件 handler；`aurora start` 在配置加载完成后、WorldJournal 和 MCP
+产生启动效果前应用 `logging.toml`，后续注册的 logger 继承同一状态。项目拥有的运行模块只在稳定边界记录结构化参数：INFO 表示
+启动、就绪和关闭等生命周期，WARNING 表示已经被处理的降级或效果未知，ERROR/exception 表示当前操作失败，DEBUG 表示不改变
+行为的计数、ID 和阶段。日志不得包含环境变量值、认证信息、消息正文、Prompt、Tool 参数或结果正文、模型原始请求/响应、世界提交
+summary/data；这些内容只能留在其已有领域边界。第三方库日志不计为项目诊断覆盖，也不得通过 root logger 重复传播。
+
 `aurora` 虽不属于认知核心，仍保留以下必要的增长边界：
 
 - `aurora.commands`：每个 CLI 命令一个模块，由命令目录统一注册；命令实现不进入 `main.py`；`config list` 与
@@ -377,10 +384,10 @@ OperationSpec 目录的独立适配器，不得反向侵入操作处理器。
   注入同一单例的 `WorldWriter`，engine 模块消费模型、提示词、工具与世界实例并完成跨目录引用校验；
 - `aurora.config`：按配置目录的显式注册顺序加载全部 TOML，并合并为一个只读 `AuroraConfig`；
 - `aurora.composer`：为分阶段组合提供类型化实例键、构造上下文和只读结果，不知道具体 `src` 子包；
-- `aurora.runtime`：在异步进程边界中先初始化唯一 WorldJournal，再连接并完整发现 MCP，然后把同一 world 实例与冻结的 MCP Tool 集合
+- `aurora.runtime`：在异步进程边界中先应用日志配置并初始化唯一 WorldJournal，再连接并完整发现 MCP，然后把同一 world 实例与冻结的 MCP Tool 集合
   交给同步组合，并从组合结果取得最终 runner 和项目入口配置。启动顺序固定为 world 初始化 → MCP 连接/发现 →
   ToolRegistry 冻结 → AgentDefinition 跨目录校验 → engine 可运行 → cadence 后台启动；发现完成前不得接受 AgentTree。
-- `aurora start`：首先读取项目根目录的 `.env`，且不覆盖进程已有环境变量；随后加载个人配置，从已注册模型端点构造
+- `aurora start`：首先读取项目根目录的 `.env`，且不覆盖进程已有环境变量；随后加载个人配置并应用进程日志，从已注册模型端点构造
   Model，组合一个 AuroraRuntime，并统一管理 Console、停止事件和 SIGINT/SIGTERM；`--headless` 只禁用 Console。当前没有
   Platform，因此不接受或伪装平台选择参数；
 - `aurora.utils`：只保存无项目语义的功能工具，例如子进程执行与 TOML 字段读取。
@@ -418,6 +425,10 @@ stdio App 必须声明 `working_dir + command`，不得声明 URL；Streamable H
 `platforms.toml` 只保存 MCP 总开关与终端诊断偏好，不由此恢复通用 Platform、Manifest 或七端口体系。App enabled、目录或 schema 变化只在
 重启后生效。`ops` 对现有 App 的 enabled 改动仍保留 TOML 注释，并返回 `restart_required=true`。
 
+`logging.toml` 解析为不可变的 `level + log_dir` 配置；level 只接受标准 DEBUG/INFO/WARNING/ERROR/CRITICAL（WARN 规范化为
+WARNING），log_dir 必须是项目内相对目录。运行日志固定写入该目录的 `aurora.log` 并按大小轮转，同时保留终端诊断；配置本身不提供
+任意格式字符串、绝对路径、handler 类或远程日志地址。
+
 `.env` 是本地启动便利入口，只能向进程环境补充尚不存在的变量，不覆盖调用者显式设置的环境，也不定义或改写 TOML
 结构。文件不存在时按空环境处理；`.env` 与 `config/` 一样属于个人文件，不进入源码发布或 Git 跟踪。
 
@@ -440,7 +451,7 @@ per-scope sequence 与全局 insertion cursor，只保存世界提交，不归�
 - Panel 后端、认证、附件和 WebSocket；
 - MCP Resources、Prompts、MCP Apps UI、sampling、elicitation、roots、`io.modelcontextprotocol/tasks` 与非文本工具结果；
 - 运行期 ToolRegistry 热替换、MCP 自动重连和跨重连效果幂等；
-- sandbox 和生产化日志设施；
+- sandbox，以及远程日志收集、分布式 trace、审计归档和运行期日志重配置；
 - WorldJournal 之外的持久化、故障恢复、租约、抢占、并发和费用统计；
 - 为上述能力存在的结构配置与测试。
 
@@ -483,3 +494,5 @@ MCP Tasks 只是一种协议扩展，也不得映射为 Aurora Task；如未来�
     `world_events`，测试不声称 best-effort 通知已经送达。sampling、elicitation、roots 和 Tasks 不会触发模型、用户或独立任务旁路。
 19. HTTPS 重定向逐跳验证并拒绝降级到 HTTP；stdio 子进程不继承未授权密钥；MCP ops 端口未装配时返回
     `NOT_AVAILABLE`；依赖边界测试确认没有 `src/platform`、AMP、Task 或七端口回流。
+20. `logging.toml` 在 World/MCP 启动效果前配置统一终端与轮转文件 logger；核心运行包的启动、结束、失败和效果未知路径有日志行为测试，
+    且测试确认消息正文、Prompt、Tool 参数/结果、模型载荷、环境变量值与世界 data 不会进入项目日志。

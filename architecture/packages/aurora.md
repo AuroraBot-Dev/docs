@@ -26,6 +26,7 @@ aurora/
 
 ```text
 加载纯配置
+  → 应用 logging.toml（终端 + 轮转文件）
   → 初始化唯一 WorldJournal
   → 启动全部 enabled MCP App
   → SDK 2.x 自动协商（2026-07-28 优先，旧修订兼容）
@@ -62,6 +63,7 @@ COMPOSITION_REGISTRARS = (
 ## 生命周期
 
 - 异步 assembly：配置 → world 初始化 → MCP 完整发现 → 同步组合 → `AuroraRuntime`；
+- 日志配置在 world 初始化和 MCP 子进程启动前生效；关闭日志只描述阶段和 ID，不复制领域载荷；
 - `run_project()`：只有 registry 冻结和跨目录校验成功后才开放 Console/AgentTree；`cadence.enabled = true` 时再创建节律后台任务；
 - 关闭顺序先停止 cadence/Console 与新的 AgentTree 输入，再关闭 MCP 连接和 stdio 子进程，最后关闭 WorldJournal；
 - 运行中不 reload、不热替换 MCP Tool、不自动重连；目录变化或断线只更新状态并要求重启；

@@ -32,3 +32,7 @@ cp -r config.example config
 `openai_compatible` provider 都通过 LiteLLM 模型网关调用，密钥只读取 `secret_env` 指定的环境变量。
 
 `runtime.console.enabled` 决定 `aurora start` 默认是否启动本地终端；命令行 `--headless` 可以在单次启动中禁用终端。
+
+`logging.level` 接受 `DEBUG / INFO / WARNING / ERROR / CRITICAL`（`WARN` 等价于 `WARNING`）；`logging.log_dir` 必须是项目内
+相对目录。`aurora start` 在其他运行时效果前配置终端日志，并把同一批项目日志写入 `<log_dir>/aurora.log` 的有界轮转文件。
+日志只记录阶段、稳定 ID、计数和错误类型，不记录消息、Prompt、Tool 参数/结果、模型请求响应、环境变量值或世界提交 data。

@@ -11,6 +11,8 @@ config.example/（源码模板） ──复制──→ config/（个人配置�
                                       │  configuration/<同名>.py 显式注册
                                       ▼
                                AuroraConfig（只读纯配置）
+                                      │
+                                      └─→ 配置统一终端 + logs/aurora.log 轮转日志
 
 异步启动边界：
   WorldJournal.initialize()
@@ -60,6 +62,12 @@ MCP Tool 因果：
     → ScopedTool.resolve_scopes → engine frontier 屏障
     → tools/call → succeeded / failed / result _meta unknown
     → 同一 ToolOutput 与世界因果路径（不建立异步回执或第二套运行循环）
+
+运行诊断（不进入 World / transcript）：
+  aurora / engine / ai / tools / world / mcp / cadence / memory / console / ops
+    → src.utils.logging 非传播 logger
+    → INFO 生命周期、WARNING 已处理降级、ERROR 当前操作失败、DEBUG ID/计数/阶段
+    → 终端 + 有界轮转文件；不记录消息、Prompt、Tool 参数/结果、模型载荷、密钥或世界 data
 ```
 
 ## 包边界一句话
