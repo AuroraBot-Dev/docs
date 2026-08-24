@@ -49,7 +49,8 @@ Memory 只产生 `PromptAssembler` 的显式输入，Cadence 只请求启动一�
 - **注册变化轴，不注册猜想**：命令、TOML 配置和项目组件是确定的并列变化轴，使用显式目录注册表；其他能力没有两个真实
   实现或明确不变量时，不建立生命周期体系或通用扩展接口。
 - **外部动作归 Tool，外部事实归 World**：MCP `tools/call` 只能经统一 Tool 契约执行；MCP Server 主动上报的环境变化只能
-  追加到 WorldJournal，不能直接追加节点 transcript、恢复节点或启动 AgentTree。
+  追加到 WorldJournal，不能直接追加节点 transcript、恢复节点或启动 AgentTree。只有 world 提交成功后，Cadence 才能按
+  项目配置的注意力规则产生 `TreeLaunchRequest`；交互回复的实际投递仍经冻结 Tool，并形成独立的投递因果提交。
 - **启动发现，运行冻结**：全部启用 MCP App 必须在 AgentDefinition 引用校验之前完成连接与工具发现；发现结果与 builtin
   Tool 合并为本进程唯一、不可变的 ToolRegistry。运行中目录变化只产生状态和 `restart_required`，不得热改已有节点的可见工具。
 - **协议能力不产生旁路认知**：AuroraBot 不向 MCP Server 提供 sampling、elicitation、roots 或 Tasks 执行能力；任何这类请求、
@@ -142,6 +143,7 @@ AgentTree。
 组装器不主动召回记忆或访问 WorldReader；它不访问数据库、不选择模型、不执行工具、不读取其他节点的完整 transcript，
 也不把 Tool schema 重复写进文本。召回 I/O 属于 `src/memory`，Runner 在模型请求前通过 `MemoryReader.recall()` 取得不可变快照，
 再把快照作为显式参数传入。当前 Memory 只读取最近一小时内有活动的 scope，并为每个 scope 读取最近 50 条提交；
+节点带有非空 frontier 时只召回该 frontier 涉及的业务 scope，避免一次交互把所有 App、Console 与其他会话历史重复注入；
 不写世界、不写 transcript、不调用模型，也不建立独立记忆数据库。工具定义使用模型请求的原生 `tools` 字段传递。
 
 当前不做自动裁剪和摘要；超过显式字符上界时立即失败，让上下文策略保持可见。
@@ -160,9 +162,10 @@ engine 按因果阶段提交确定性事件：tree started/completed/failed、no
 model requested/completed/failed、tool requested/succeeded/failed/unknown、output requested/committed 与 world delta delivered；
 模型事件只记录元数据，不复制 transcript 正文。
 
-`src/cadence` 持有 `WorldReader + WorldWriter`。启用时它按 `tick_seconds` 向 `aurora:cadence` 提交 `cadence.tick`，
-并在累计 `evoke_every` 个非 `engine.*` 提交后最多请求启动一棵配置指定的 AgentTree。它只产生 `TreeLaunchRequest`，
-不得直接创建或修改节点；默认禁用。
+`src/cadence` 持有 `WorldReader + WorldWriter`。启用时它按 `tick_seconds` 向 `aurora:cadence` 提交 `cadence.tick`。
+配置化 reactive rule 可以在一条匹配的 `mcp.event.received` 已提交后立即请求启动指定 AgentTree；未命中 reactive rule 的
+MCP 业务事件累计到 `evoke_every` 后，最多请求启动一棵批量 triage AgentTree。Cadence 只产生 `TreeLaunchRequest`，不得直接
+创建或修改节点。全局 stream 必须逐提交推进 durable cursor；一次树运行期间新到达的提交不得因跳到 stream head 而丢弃。
 
 MCP 生命周期与目录事实使用 `mcp.app.starting/ready/failed/disconnected` 和
 `mcp.catalog.frozen/changed`，归属 `aurora:mcp:<package>` scope。MCP 业务事件使用 `mcp.event.received`，
@@ -177,11 +180,13 @@ Tree 只基于已经披露给其 node 的 frontier 推理。环境适配器只�
 配对的 deferred tool 结果；root draft 以普通 message 收到 delta。node 看完全部页面后的下一次 Tool batch 或 root 文本，
 就是 Bot 明确选择以当前 observed frontier 为本次行动截面；随后到达的提交与该行动并发，不自动使它饥饿。接受的 Tool batch
 先原子记录 `tool.requested`，执行后记录 `tool.succeeded` 或 `tool.failed`；root 文本记录 `output.requested` 和
-`output.committed` 后才完成树。
+`output.committed` 后才完成树。由 reactive rule 唤起的交互树完成后，组合根按 `caused_by` 查回原世界事实，把 root 文本经
+对应冻结 Tool 投递到原会话，并记录 `output.delivery.requested` 与 `output.delivery.succeeded / failed / unknown`。投递结果
+unknown 时不得自动重试；MCP 事件和 Cadence 都不直接调用协议客户端。
 
 提交记录 tree id、node id、可选 tool call id 和 based-on frontier。框架只保证事实披露、因果、授权、参数与资源边界；消息
-是否相关、是否等待、是否回复以及是否以某个 frontier 行动，都由 Bot 决定。MCP 事件只进入 WorldJournal，
-不直接启动 AgentTree；是否主动唤起仍只由 Cadence 策略决定。MCP App 被发现不得隐式启动时钟或心跳。
+是否相关、是否等待、是否回复以及是否以某个 frontier 行动，都由 Bot 的 Cadence 配置与 Agent 决定。MCP 事件只进入
+WorldJournal，不直接启动 AgentTree；是否主动唤起仍只由 Cadence 策略决定。MCP App 被发现不得隐式启动时钟或心跳。
 
 ## 8. 完整最小循环
 
@@ -207,7 +212,9 @@ Tree 只基于已经披露给其 node 的 frontier 推理。环境适配器只�
 后台派发不是当前核心。这个选择用于暴露语义，不构成未来并发实现的限制；未来并发仍必须产生等价的树和节点 transcript。
 
 模型失败使当前节点失败；Tool 的 failed 或 unknown 结果都生成普通 tool 错误消息，由模型决定如何继续。child 失败同样作为
-delegate call 的 tool 错误返回 parent。运行时不伪造模型回复、不自动重试，尤其不重试结果不确定的外部效果，也不把空文本改写成完成消息。
+delegate call 的 tool 错误返回 parent。engine 不伪造模型回复、不重试 Tool，也不把空文本改写成完成消息。Model gateway
+可以在一个显式总截止时间内对无外部效果的模型请求作有限次尝试，但必须关闭 Provider SDK 的隐式重试、记录每次尝试的序号与
+耗时，并把总截止时间耗尽作为一次明确模型失败。任何结果不确定的外部效果都不得自动重试。
 
 ## 9. 最小端口
 

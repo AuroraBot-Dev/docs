@@ -56,6 +56,8 @@ MCP 外部事实：
     → src/mcp 校验 EnvironmentEvent
     → WorldWriter.append_event
     → WorldJournal（不直接写 transcript，不直接启动 AgentTree）
+    → Cadence reactive rule → builtin.chat AgentTree
+    → 组合根按 caused_by 经冻结 QQ Tool 投递 → output.delivery.*
 
 MCP Tool 因果：
   默认 App scope / 协商 tool-contract v1 的顶层参数 scope 模板
@@ -81,7 +83,7 @@ MCP Tool 因果：
 - `src/console`：本地异步终端，输入事件先入世界线，输出不入；
 - `src/engine`：确定性 AgentTree 执行器，通过 WorldJournal 记录全部运行因果；
 - `src/memory`：最近一小时活跃 scope 的最近 50 条提交记忆，经 prompt 注入 system；
-- `src/cadence`：每小时提交 tick，每 5 个非 engine 世界提交唤起一棵 triage AgentTree；
+- `src/cadence`：实时规则唤起交互树，未匹配的 MCP 事件每 5 个唤起一棵 triage AgentTree，并每小时提交 tick；
 - `src/mcp`：SDK 2.x 协议协商、stdio/HTTPS 连接、完整 Tool 发现、Tool 执行与外部事件写入；
 - `ops`：热路径外的统一操作目录，为每个包提供 method/path 与斜杠入口；
 - `aurora`：唯一组合根、配置加载、runtime 门面与 CLI。

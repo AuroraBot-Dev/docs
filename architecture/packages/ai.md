@@ -13,12 +13,15 @@ order: 7
   `openai/model + api_base`；
 - OpenAI-compatible role 与 Tool 名称适配；Provider 别名不得泄漏回 AgentTree 或 ToolRegistry；
 - 密钥只在调用时从 endpoint 声明的环境变量读取。
+- 每个请求使用配置的单次 attempt 超时、最大 attempt 数和总截止时间；Provider SDK 隐式重试固定关闭；
+- DEBUG 日志只记录 endpoint、attempt、耗时、消息数与工具数，不记录模型载荷。
 
 ## 边界
 
 - 只依赖 contracts 与 litellm；
 - 不读世界、不选择模型、不缓存 transcript、不执行工具；
 - 模型失败作为异常交给 engine 记录为 `engine.model.failed`。
+- 模型请求可以安全有限重试；Tool 与输出投递的 failed / unknown 不属于此重试边界。
 
 ## ops 入口
 
