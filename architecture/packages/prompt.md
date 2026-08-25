@@ -11,13 +11,14 @@ order: 6
 - 输入 `AgentTree + node id`，输出下一次模型调用的四角色消息序列；
 - 合并全局人格、世界说明与 node prompt 为唯一 system；
 - child 的 system 注入局部职责，首条 message 注入 parent assignment；
-- 校验角色顺序、Tool call 配对与上下文上界。
+- 校验角色顺序、Tool call 配对与上下文上界；
+- 超界不失败：从最早 transcript 消息开始确定性丢弃，并在 system 后插入带 TODO 标记的 message；system 自身超限时截断 system 并附加同一标记。
 
 ## 世界访问权与记忆注入
 
 - `PromptAssembler.assemble(..., memory=MemorySnapshot | None)` 接收记忆快照；
 - 记忆由 `src/memory` 的 `WorldReader` 查询，由 engine 在模型请求前召回并传入；
-- 记忆以“最近一小时的世界活动”片段注入唯一 system 消息，不写 transcript；
+- 记忆以“最近时间窗口内的世界活动”片段注入唯一 system 消息，不写 transcript；
 - 世界更新本身仍由 engine 以显式 delta message/tool 结果送入 transcript，保证模型看到的事实有审计路径；
 - PromptAssembler 不直接读取世界或 MCP；新的世界事实仍须先进入 WorldJournal，再由 engine 依 frontier 披露。
 

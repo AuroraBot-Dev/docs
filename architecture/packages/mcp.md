@@ -85,8 +85,8 @@ MCP 持有同一个 WorldJournal 的 `WorldWriter` 窄视角。生命周期与�
 `cadence.*`、`ops.*` 的载荷。
 
 MCP 事件只进入 WorldJournal，不直接追加节点 transcript、完成 Tool call 或启动 AgentTree。engine 只按 frontier 披露事件，
-主动唤起仍由 cadence 在 durable commit 后按配置规则决定；发现 App 也不会隐式启动 heartbeat。Reactive tree 的 root 输出由
-组合根按原 commit 的 package、event kind 与业务数据选择冻结 MCP Tool 投递，MCP 包本身不拥有回复策略。
+主动唤起仍由 cadence 在 durable commit 后按配置规则决定；发现 App 也不会隐式启动 heartbeat。运行时不做自动投递，reactive
+tree 的各节点 assistant 文本只回显到本地终端；对外回复由 Agent 显式调用可见的发送 Tool 完成，MCP 包本身不拥有回复策略。
 
 当前 Streamable HTTP 客户端不提供自定义长期 Server→Client 事件订阅，因此配置不得组合该 transport 与 `world_events`。
 通知只有 best-effort 语义，没有 Aurora 级 ACK、重放或送达证明；event id 只保证 Host 实际收到后的幂等提交。Server 与 ops 可以

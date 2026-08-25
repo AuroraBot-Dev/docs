@@ -21,7 +21,7 @@ order: 7
 - 只依赖 contracts 与 litellm；
 - 不读世界、不选择模型、不缓存 transcript、不执行工具；
 - 模型失败作为异常交给 engine 记录为 `engine.model.failed`。
-- 模型请求可以安全有限重试；Tool 与输出投递的 failed / unknown 不属于此重试边界。
+- 模型请求可以安全有限重试；Tool 的 failed / unknown 不属于此重试边界。
 
 ## ops 入口
 

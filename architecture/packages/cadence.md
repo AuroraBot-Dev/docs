@@ -57,7 +57,7 @@ contains_any = ["小光", "夜曦光"]
 - 只依赖 `src.contracts`（`WorldReader` / `WorldWriter` / `TreeLauncher`）；
 - 不进入 engine 热路径，不与交互式 `/run` 形成第二套循环；
 - 只产生 `TreeLaunchRequest` 或空操作，不直接修改 AgentTree；
-- reactive request 的 `caused_by` 指向原世界提交，frontier 只包含原业务 scope；组合根据此完成确定性回复投递；
+- reactive request 的 `caused_by` 指向原世界提交，frontier 只包含原业务 scope；树运行期间组合根把各节点 assistant 文本回显到本地终端，不自动回复外部会话；
 - engine / tool / output / ops / cadence 生命周期提交不进入批量计数；
 - 策略替换（表 → 模型）不得改变 engine 与 world 的接口。
 

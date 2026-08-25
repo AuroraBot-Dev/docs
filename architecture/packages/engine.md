@@ -47,7 +47,7 @@ class TreeLaunchRequest:
 
 交互式 `/run` 与后台 cadence 唤起都落到 `engine.run` 同一入口。
 MCP 事件提交本身不会调用该入口；只有 cadence 可以在 durable commit 后基于世界流决定产生 TreeLaunchRequest。
-带 `caused_by` 的 reactive tree 完成后由组合根投递 root 输出；engine 不识别 QQ 或其他外部协议。
+带 `caused_by` 的树运行期间组合根把各节点 assistant 文本回显到本地终端；对外回复必须由 Agent 调用可见发送 Tool 完成，engine 不识别 QQ 或其他外部协议。
 
 ## 组合
 

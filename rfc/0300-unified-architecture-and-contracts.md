@@ -50,7 +50,7 @@ Memory 只产生 `PromptAssembler` 的显式输入，Cadence 只请求启动一�
   实现或明确不变量时，不建立生命周期体系或通用扩展接口。
 - **外部动作归 Tool，外部事实归 World**：MCP `tools/call` 只能经统一 Tool 契约执行；MCP Server 主动上报的环境变化只能
   追加到 WorldJournal，不能直接追加节点 transcript、恢复节点或启动 AgentTree。只有 world 提交成功后，Cadence 才能按
-  项目配置的注意力规则产生 `TreeLaunchRequest`；交互回复的实际投递仍经冻结 Tool，并形成独立的投递因果提交。
+  项目配置的注意力规则产生 `TreeLaunchRequest`；对外回复必须由 Agent 经可见的冻结发送 Tool 显式完成，运行时不做自动投递。
 - **启动发现，运行冻结**：全部启用 MCP App 必须在 AgentDefinition 引用校验之前完成连接与工具发现；发现结果与 builtin
   Tool 合并为本进程唯一、不可变的 ToolRegistry。运行中目录变化只产生状态和 `restart_required`，不得热改已有节点的可见工具。
 - **协议能力不产生旁路认知**：AuroraBot 不向 MCP Server 提供 sampling、elicitation、roots 或 Tasks 执行能力；任何这类请求、
@@ -142,11 +142,13 @@ AgentTree。
 
 组装器不主动召回记忆或访问 WorldReader；它不访问数据库、不选择模型、不执行工具、不读取其他节点的完整 transcript，
 也不把 Tool schema 重复写进文本。召回 I/O 属于 `src/memory`，Runner 在模型请求前通过 `MemoryReader.recall()` 取得不可变快照，
-再把快照作为显式参数传入。当前 Memory 只读取最近一小时内有活动的 scope，并为每个 scope 读取最近 50 条提交；
-节点带有非空 frontier 时只召回该 frontier 涉及的业务 scope，避免一次交互把所有 App、Console 与其他会话历史重复注入；
-不写世界、不写 transcript、不调用模型，也不建立独立记忆数据库。工具定义使用模型请求的原生 `tools` 字段传递。
+再把快照作为显式参数传入。当前 Memory 只读取最近时间窗口内有活动的 scope，并为每个 scope 读取最近有限条提交，窗口、
+每 scope 条数由配置决定；召回前先按配置的 scope 白名单/黑名单模式过滤，节点带有非空 frontier 时只召回该 frontier 涉及的
+业务 scope，避免一次交互把所有 App、Console 与其他会话历史重复注入；不写世界、不写 transcript、不调用模型，也不建立
+独立记忆数据库。工具定义使用模型请求的原生 `tools` 字段传递。
 
-当前不做自动裁剪和摘要；超过显式字符上界时立即失败，让上下文策略保持可见。
+当前不做自动摘要；超过显式字符上界时不失败，而是确定性地从最早 transcript 消息开始丢弃，并在 system 后插入带 TODO
+标记的 message；system 自身超限时截断 system 并附加同一标记，让上下文策略保持可见。
 
 ## 7. 世界提交与观察前沿
 
@@ -180,9 +182,8 @@ Tree 只基于已经披露给其 node 的 frontier 推理。环境适配器只�
 配对的 deferred tool 结果；root draft 以普通 message 收到 delta。node 看完全部页面后的下一次 Tool batch 或 root 文本，
 就是 Bot 明确选择以当前 observed frontier 为本次行动截面；随后到达的提交与该行动并发，不自动使它饥饿。接受的 Tool batch
 先原子记录 `tool.requested`，执行后记录 `tool.succeeded` 或 `tool.failed`；root 文本记录 `output.requested` 和
-`output.committed` 后才完成树。由 reactive rule 唤起的交互树完成后，组合根按 `caused_by` 查回原世界事实，把 root 文本经
-对应冻结 Tool 投递到原会话，并记录 `output.delivery.requested` 与 `output.delivery.succeeded / failed / unknown`。投递结果
-unknown 时不得自动重试；MCP 事件和 Cadence 都不直接调用协议客户端。
+`output.committed` 后才完成树。运行时不做自动投递：cadence 唤起树运行期间把各节点 assistant 文本渲染到本地终端（不进入
+世界线），对外回复必须由 Agent 显式调用可见的发送 Tool；MCP 事件和 Cadence 都不直接调用协议客户端。
 
 提交记录 tree id、node id、可选 tool call id 和 based-on frontier。框架只保证事实披露、因果、授权、参数与资源边界；消息
 是否相关、是否等待、是否回复以及是否以某个 frontier 行动，都由 Bot 的 Cadence 配置与 Agent 决定。MCP 事件只进入
