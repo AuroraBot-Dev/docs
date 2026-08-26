@@ -1,5 +1,9 @@
 # AuroraBot Documentation
 
+<p align="center">
+  <a href="README.md">中文</a> | <b>English</b> | <a href="README.ja.md">日本語</a>
+</p>
+
 This directory contains the source for the AuroraBot documentation site, built with [VitePress](https://vitepress.dev/).
 
 ## Contents
@@ -45,13 +49,3 @@ Or use scripts from the repository root (`docs` is a Git submodule; `docs_setup`
 
 `docs_setup` and `docs_update` first ensure the `docs` submodule is checked out with `git submodule update --init` (initializing it when missing), then install dependencies. `docs_update` moves the submodule to the latest remote commit; commit the pointer change in the main repository when it changes.
 
-## Notes
-
-- `.npmrc` sets `node-linker=hoisted` so pnpm installs dependencies in a flat layout compatible with Vite's dependency pre-bundling.
-- Mermaid diagrams are integrated via `vitepress-plugin-mermaid`.
-- Reading enhancements are provided by `@nolebase/vitepress-plugin-enhanced-readabilities`.
-
-## Conventions
-
-- Design changes first update `rfc/0300-unified-architecture-and-contracts.md`, then sync to the `architecture/` pages.
-- New packages must follow `architecture/packages/package-baseline.md`.

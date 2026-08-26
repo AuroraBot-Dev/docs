@@ -1,5 +1,9 @@
 # AuroraBot ドキュメント
 
+<p align="center">
+  <a href="README.md">中文</a> | <a href="README.en.md">English</a> | <b>日本語</b>
+</p>
+
 このディレクトリは [VitePress](https://vitepress.dev/) で構築された AuroraBot ドキュメントサイトのソースです。
 
 ## コンテンツ
@@ -45,13 +49,3 @@ pnpm build      # 本番ビルド、.vitepress/dist に出力
 
 `docs_setup` と `docs_update` は `git submodule update --init` で `docs` サブモジュールがチェックアウトされていることを確認（未初期化の場合は自動で初期化）してから依存関係をインストールします。`docs_update` はサブモジュールをリモートの最新コミットに更新します。ポインタが変わった場合は、メインリポジトリでその変更をコミットしてください。
 
-## 備考
-
-- `.npmrc` で `node-linker=hoisted` を設定し、pnpm が Vite の依存関係プリバンドルと互換性のあるフラットレイアウトでインストールします。
-- Mermaid 図表は `vitepress-plugin-mermaid` で統合されています。
-- 読みやすさの強化は `@nolebase/vitepress-plugin-enhanced-readabilities` で提供されます。
-
-## 約束事
-
-- 設計変更はまず `rfc/0300-unified-architecture-and-contracts.md` を更新し、その後 `architecture/` のページと同期します。
-- 新しいパッケージは `architecture/packages/package-baseline.md` に従う必要があります。

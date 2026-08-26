@@ -1,5 +1,9 @@
 # AuroraBot 文档
 
+<p align="center">
+  <b>中文</b> | <a href="README.en.md">English</a> | <a href="README.ja.md">日本語</a>
+</p>
+
 本目录是 AuroraBot 文档站的源码，基于 [VitePress](https://vitepress.dev/) 构建。
 
 ## 内容
@@ -44,14 +48,3 @@ pnpm build      # 生产构建，输出到 .vitepress/dist
 ```
 
 `docs_setup` 与 `docs_update` 会先通过 `git submodule update --init` 确保 `docs` 子模块已检出（未初始化时自动补上），再安装依赖；`docs_update` 会把子模块更新到远端最新提交，指针变化时需在主仓提交该变化。
-
-## 配置说明
-
-- `.npmrc` 中设置了 `node-linker=hoisted`，使 pnpm 以平铺方式安装依赖，兼容 Vite 的依赖预打包；
-- Mermaid 图表通过 `vitepress-plugin-mermaid` 集成；
-- 阅读增强通过 `@nolebase/vitepress-plugin-enhanced-readabilities` 提供。
-
-## 约定
-
-- 设计变更先更新 `rfc/0300-unified-architecture-and-contracts.md`，再同步 `architecture/` 下的实施架构页；
-- 新增包必须遵循 `architecture/packages/package-baseline.md`。
