@@ -4,11 +4,11 @@
   "version": "0.6.0",
   "description": "AuroraBot 文档站",
   "scripts": {
-    "dev": "vitepress dev . --host 0.0.0.0 --port 5173",
-    "build": "vitepress build .",
+    "dev": "pnpm vitepress dev . --host 0.0.0.0 --port 5173",
+    "build": "pnpm vitepress build .",
     "typecheck": "tsc --noEmit",
-    "docs:dev": "vitepress dev . --host 0.0.0.0 --port 5173",
-    "docs:build": "vitepress build ."
+    "docs:dev": "pnpm vitepress dev . --host 0.0.0.0 --port 5173",
+    "docs:build": "pnpm vitepress build ."
   },
   "devDependencies": {
     "@nolebase/vitepress-plugin-enhanced-readabilities": "^2.18.2",

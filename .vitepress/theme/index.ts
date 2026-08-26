@@ -1,5 +1,5 @@
 import DefaultTheme from "vitepress/theme";
-import type { Theme } from "vitepress";
+import type { EnhanceAppContext } from "vitepress";
 import Layout from "./Layout";
 import "./custom.css";
 import "@nolebase/vitepress-plugin-enhanced-readabilities/client/style.css";
@@ -7,10 +7,10 @@ import type { Options } from "@nolebase/vitepress-plugin-enhanced-readabilities/
 import { InjectionKey } from "@nolebase/vitepress-plugin-enhanced-readabilities/client";
 import { defaultZhCNLocale } from "@nolebase/vitepress-plugin-enhanced-readabilities/locales";
 
-const theme: Theme = {
+export default {
   extends: DefaultTheme,
   Layout,
-  enhanceApp(ctx) {
+  enhanceApp(ctx: EnhanceAppContext) {
     DefaultTheme.enhanceApp?.(ctx);
     ctx.app.provide(InjectionKey, {
       spotlight: {
@@ -22,5 +22,3 @@ const theme: Theme = {
     } as Options);
   },
 };
-
-export default theme;
