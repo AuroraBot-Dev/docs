@@ -27,17 +27,23 @@ pnpm dev        # 本地开发，默认 http://localhost:5173
 pnpm build      # 生产构建，输出到 .vitepress/dist
 ```
 
-也可从仓库根目录使用脚本：
+也可从仓库根目录使用脚本（`docs` 是 Git 子模块，`docs_setup` 会先初始化子模块）：
 
 ```bash
 # Linux / macOS
-./scripts/linux/docs_preview.sh      # 或 scripts/macos/docs_preview.command
-./scripts/linux/docs_build.sh        # 或 scripts/macos/docs_build.command
+./scripts/linux/docs_setup.sh        # 初始化子模块并安装依赖
+./scripts/linux/docs_update.sh       # 拉取子模块最新提交并更新依赖
+./scripts/linux/docs_preview.sh      # 本地预览（或 scripts/macos/docs_*.command）
+./scripts/linux/docs_build.sh        # 生产构建
 
 # Windows (PowerShell)
+.\scripts\windows\docs_setup.ps1
+.\scripts\windows\docs_update.ps1
 .\scripts\windows\docs_preview.ps1
 .\scripts\windows\docs_build.ps1
 ```
+
+`docs_setup` 与 `docs_update` 会先通过 `git submodule update --init` 确保 `docs` 子模块已检出（未初始化时自动补上），再安装依赖；`docs_update` 会把子模块更新到远端最新提交，指针变化时需在主仓提交该变化。
 
 ## 配置说明
 

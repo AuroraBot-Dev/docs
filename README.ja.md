@@ -27,17 +27,23 @@ pnpm dev        # ローカル開発サーバー、デフォルト http://localh
 pnpm build      # 本番ビルド、.vitepress/dist に出力
 ```
 
-リポジトリルートからスクリプトを使用することもできます：
+リポジトリルートからスクリプトを使用することもできます（`docs` は Git サブモジュールで、`docs_setup` が最初にサブモジュールを初期化します）：
 
 ```bash
 # Linux / macOS
-./scripts/linux/docs_preview.sh      # または scripts/macos/docs_preview.command
-./scripts/linux/docs_build.sh        # または scripts/macos/docs_build.command
+./scripts/linux/docs_setup.sh        # サブモジュールの初期化と依存関係のインストール
+./scripts/linux/docs_update.sh       # サブモジュールを最新に更新し依存関係を更新
+./scripts/linux/docs_preview.sh      # ローカルプレビュー（または scripts/macos/docs_*.command）
+./scripts/linux/docs_build.sh        # 本番ビルド
 
 # Windows (PowerShell)
+.\scripts\windows\docs_setup.ps1
+.\scripts\windows\docs_update.ps1
 .\scripts\windows\docs_preview.ps1
 .\scripts\windows\docs_build.ps1
 ```
+
+`docs_setup` と `docs_update` は `git submodule update --init` で `docs` サブモジュールがチェックアウトされていることを確認（未初期化の場合は自動で初期化）してから依存関係をインストールします。`docs_update` はサブモジュールをリモートの最新コミットに更新します。ポインタが変わった場合は、メインリポジトリでその変更をコミットしてください。
 
 ## 備考
 
