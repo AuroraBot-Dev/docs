@@ -21,6 +21,7 @@ order: 8
 - 只依赖 `src.contracts`（WorldWriter、scope/kind 常量）与 prompt-toolkit；
 - 不导入 ops、engine、aurora，不保存 AgentTree，不解释命令；
 - 输入事件由 console 自己决定 scope：`aurora:console`。
+- Panel Token 的 Rich 提示属于 ops/aurora 启动生命周期，不由 `src.console` 渲染，也不进入世界线。
 
 ## ops 入口
 

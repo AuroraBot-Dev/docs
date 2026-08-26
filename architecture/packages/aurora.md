@@ -16,6 +16,7 @@ aurora/
   composer.py      InstanceKey、CompositionContext、AuroraAssembly
   config.py        ConfigKey、AuroraConfig、合并器
   runtime.py       AuroraRuntime、assemble_runtime、run_project
+  panel_runtime.py Panel 配置转换、路径与 HTTP 生命周期
   main.py          顶层 CLI 解析与分派
   utils/           子进程、TOML 字段等无项目语义工具
 ```
@@ -33,6 +34,7 @@ aurora/
   → 在 App 启动截止时间内建立唯一目录监听并完整分页 tools/list
   → 冻结 MCP Tool 快照
   → 执行同步 composition
+  → 绑定统一停止请求并启动 Panel HTTP
 ```
 
 同步注册顺序：
@@ -64,8 +66,9 @@ COMPOSITION_REGISTRARS = (
 
 - 异步 assembly：配置 → world 初始化 → MCP 完整发现 → 同步组合 → `AuroraRuntime`；
 - 日志配置在 world 初始化和 MCP 子进程启动前生效；关闭日志只描述阶段和 ID，不复制领域载荷；
-- `run_project()`：只有 registry 冻结和跨目录校验成功后才开放 Console/AgentTree；`cadence.enabled = true` 时再创建节律后台任务；
-- 关闭顺序先停止 cadence/Console 与新的 AgentTree 输入，再关闭 MCP 连接和 stdio 子进程，最后关闭 WorldJournal；
+- `run_project()`：只有 registry 冻结、跨目录校验和停止请求绑定成功后才开放 Panel/Console/AgentTree；Panel ready 后才显示 Token 提示和打开浏览器；
+- `cadence.enabled = true` 时再创建节律后台任务；`--headless` 只禁用 Console，不禁用配置中启用的 Panel；
+- 关闭顺序先停止 Panel/Console 与新的 AgentTree 输入，再停止 cadence、关闭 MCP 连接和 stdio 子进程，最后关闭 WorldJournal；
 - 运行中不 reload、不热替换 MCP Tool、不自动重连；目录变化或断线只更新状态并要求重启；
 - SIGINT / SIGTERM / EOF / `/exit` 汇聚到同一停止事件。
 

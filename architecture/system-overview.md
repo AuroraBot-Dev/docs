@@ -28,6 +28,11 @@ config.example/（源码模板） ──复制──→ config/（个人配置�
 最终启动校验：
   ToolRegistry 冻结 → AgentDefinition 精确 Tool ID 引用校验 → engine 可接受 AgentTree
 
+本地 Panel：
+  Token.txt ──登录──→ 摘要持久化的限时 Bearer session
+  Vue Panel ──认证 HTTP──→ ops.panel ──→ 同一 OperationRouter
+  35 个目录项中 34 个可经 HTTP 调用；text_only 清屏仍只属于终端
+
 普通终端输入（不特化，先入世界线）：
   TerminalConsole ──WorldWriter.append_commit──→ WorldJournal
         │  console.input / aurora:console
@@ -85,7 +90,7 @@ MCP Tool 因果：
 - `src/memory`：最近时间窗口内活跃 scope 的最近有限条提交记忆（可配置 scope 白名单/黑名单），经 prompt 注入 system；
 - `src/cadence`：实时规则唤起交互树，未匹配的 MCP 事件每 5 个唤起一棵 triage AgentTree，并每小时提交 tick；
 - `src/mcp`：SDK 2.x 协议协商、stdio/HTTPS 连接、完整 Tool 发现、Tool 执行与外部事件写入；
-- `ops`：热路径外的统一操作目录，为每个包提供 method/path 与斜杠入口；
+- `ops`：热路径外的统一操作目录，以及消费同一目录的本地认证 HTTP 适配；
 - `aurora`：唯一组合根、配置加载、runtime 门面与 CLI。
 
 ## 世界访问权

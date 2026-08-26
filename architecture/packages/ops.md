@@ -16,6 +16,7 @@ ops/
   router.py          method/path 与文本共用路由、JSON 渲染
   runtime.py         OpsRuntime：装配 OpsPorts
   registry.py        装饰器注册与目录加载
+  panel/             本地 HTTP、Token/session、server 与终端提示
   operations/
     system.py
     config.py
@@ -73,6 +74,10 @@ ops 不直接持有 world，而是通过 `WorldRuntimePort.record_event` 提交�
 
 ## 边界
 
-- 只依赖标准库与 tomlkit；不导入 `src` 或 `aurora`；
+- 核心操作目录只依赖标准库与 tomlkit；`panel` 适配层额外依赖 aiosqlite、FastAPI、Uvicorn 与 Rich；
+- 不导入 `src` 或 `aurora`；Panel 路径、纯配置和生命周期由组合根注入；
 - 不保存第二份运行状态，不进入 AgentTreeRunner 热路径；
-- 未来 HTTP、Panel 等适配器消费同一 `OperationSpec`，不得在 ops 里写适配器逻辑。
+- Panel adapter 消费同一 `OperationSpec`，认证和 HTTP 状态不得反向侵入操作处理器；
+- bootstrap Token 只用于换取摘要持久化的限时 Bearer session；除 health/login 外全部 HTTP 入口认证；
+- 35 个目录项中 34 个经 `/api/ops` 暴露，`POST /console/clear` 保持终端专用；
+- 不提供附件、WebSocket、静态前端托管、运行日志读取或第二套消息/会话模型。

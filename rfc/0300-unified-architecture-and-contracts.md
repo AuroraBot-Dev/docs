@@ -19,9 +19,10 @@ order: 10
 ## 2. 当前范围
 
 AuroraBot 是以 Bot 为主体、以 AgentTree 为一次认知运行的自主智能体框架。当前实现包含完整最小循环、项目级配置与组合、
-统一操作目录、本地 Console、持久化世界提交日志、只读近期世界记忆、世界驱动的主动节律，以及 MCP 2.x 客户端适配；
+统一操作目录及本地 Panel 适配、本地 Console、持久化世界提交日志、只读近期世界记忆、世界驱动的主动节律，以及 MCP 2.x 客户端适配；
 每个运行时包在 ops 中拥有 JSON 化指令入口。MCP 只把外部工具映射为统一 Tool，把外部事实映射为 World 提交，
-不引入第二套 Agent、Task、消息总线或运行循环。当前不包含部署、运维面板、sandbox 或通用第三方扩展生态。
+不引入第二套 Agent、Task、消息总线或运行循环。Panel 只观察和调用同一 ops 目录，不建立平行运行模型；当前不包含远程部署、
+sandbox 或通用第三方扩展生态。
 
 最小循环只有五个基本概念：
 
@@ -343,7 +344,7 @@ transcript；适配器必须返回明确的不支持错误，直到未来内容�
 | `src/cadence` | 世界驱动 tick 与 AgentTree 唤起决策 | contracts |
 | `src/mcp` | MCP 2.x 连接、发现、Tool 适配与事件写入 | contracts、mcp SDK、httpx2 |
 | `src/console` | 本地异步终端、终端控制 DTO 与输入世界事件 | contracts、prompt-toolkit |
-| `ops` | 热路径外的操作资源树、运行监测与显式改动入口 | 标准库、tomlkit |
+| `ops` | 热路径外的操作资源树、运行监测、显式改动入口与本地 Panel HTTP 适配 | 标准库、tomlkit、aiosqlite、FastAPI、Uvicorn、Rich |
 | `aurora` | 项目配置、分阶段组合根、项目 runtime 与 CLI | 所有下层包 |
 
 依赖方向固定为 `utils/contracts ← agents/prompt/ai/world/memory/cadence/mcp`、`agents/contracts ← tools ← engine ← aurora`，`console ← aurora`，
@@ -367,8 +368,19 @@ Provider；`src/mcp` 作为协议适配叶子例外依赖 MCP SDK，但不依赖
   `NOT_AVAILABLE`。写入类操作成功后由对应运行时记录世界事实，纯读操作不产生提交；
 - ops 不拥有第二份运行状态，不进入 AgentTreeRunner 热路径；engine 只通过通用观察回调发布不可变树快照，不依赖 ops。
 
-当前 ops 是适配器中立的核心，不包含 HTTP 服务、Panel 认证、附件、WebSocket、数据库或前端 Lab；这些都是以后消费同一
-OperationSpec 目录的独立适配器，不得反向侵入操作处理器。
+ops 的 `OperationSpec`、`OperationRouter` 与操作处理器保持适配器中立。`ops.panel` 是消费同一目录的本地 HTTP 适配层：
+
+- 默认只绑定 loopback；除存活检查和登录外，目录与全部 HTTP 操作都要求有效 Bearer session；
+- 长期 bootstrap Token 由密码学安全随机数生成并原子保存到 `storage.ops/Token.txt`，只用于换取 session；比较使用恒定时间函数；
+- session 使用独立随机 Token，明文只在登录响应出现一次，SQLite 只保存摘要、创建时间与过期时间；登出立即撤销当前 session；
+- 删除 `Token.txt` 后重启会生成新 Token 并撤销全部旧 session；首次生成时终端显示完整 Token，后续启动只显示文件路径；
+- Token 与 session 不进入日志、World、OperationResult、URL query 或异常文本；Uvicorn access log 关闭；
+- CORS 只接受配置中的精确 Origin，Host 必须是本地绑定地址；HTTP adapter 严格区分 path/query/JSON body 并拒绝未知参数；
+- `GET /api/ops` 返回目录，`GET|POST /api/ops/{path}` 调用现有 OperationRouter。`text_only` 操作保留在目录但不经 HTTP 暴露；
+- HTTP adapter 可以保存认证数据，但不保存 AgentTree、世界提交或第二份运行状态，也不得把认证判断放入 operation handler。
+
+当前 Panel 不包含附件、WebSocket、静态文件托管或进程日志读取。前端用现有轮询操作观察 Tree 与 World；发送消息等价于显式
+`POST /trees`，不会恢复 Session、Activity 或 mailbox。
 
 `src.utils` 只保留没有上层包依赖的通用实现。WorldJournal 的 SQLAlchemy ORM 与迁移只归 `src.world` 所有；项目配置加载、
 子进程命令等组合层工具仍属于
@@ -394,9 +406,10 @@ summary/data；这些内容只能留在其已有领域边界。第三方库日�
 - `aurora.composer`：为分阶段组合提供类型化实例键、构造上下文和只读结果，不知道具体 `src` 子包；
 - `aurora.runtime`：在异步进程边界中先应用日志配置并初始化唯一 WorldJournal，再连接并完整发现 MCP，然后把同一 world 实例与冻结的 MCP Tool 集合
   交给同步组合，并从组合结果取得最终 runner 和项目入口配置。启动顺序固定为 world 初始化 → MCP 连接/发现 →
-  ToolRegistry 冻结 → AgentDefinition 跨目录校验 → engine 可运行 → cadence 后台启动；发现完成前不得接受 AgentTree。
+  ToolRegistry 冻结 → AgentDefinition 跨目录校验 → engine 可运行 → 绑定统一停止请求 → Panel ready → cadence 后台启动；
+  发现完成和停止请求绑定前不得接受 HTTP AgentTree。关闭时先停止 HTTP 接入，再停止 cadence、MCP 与 world。
 - `aurora start`：首先读取项目根目录的 `.env`，且不覆盖进程已有环境变量；随后加载个人配置并应用进程日志，从已注册模型端点构造
-  Model，组合一个 AuroraRuntime，并统一管理 Console、停止事件和 SIGINT/SIGTERM；`--headless` 只禁用 Console。当前没有
+  Model，组合一个 AuroraRuntime，并统一管理 Panel、Console、停止事件和 SIGINT/SIGTERM；`--headless` 只禁用 Console。当前没有
   Platform，因此不接受或伪装平台选择参数；
 - `aurora.utils`：只保存无项目语义的功能工具，例如子进程执行与 TOML 字段读取。
 
@@ -443,9 +456,13 @@ WARNING），log_dir 必须是项目内相对目录。运行日志固定写入�
 模板与个人目录保持相同拓扑。每个 TOML 只由同相对路径的 configuration 模块解析；通用加载器不包含文件名、字段名或具体
 配置类型分支。新增结构配置时，增加一个模板 TOML、一个同路径 configuration 模块和一条注册记录。密钥只来自环境变量。
 
+`runtime.panel` 定义 enabled、loopback host、port、唯一 frontend URL、精确 allowed origins、是否打开浏览器与 session TTL；
+这些值在进程启动时冻结，配置 reload 后需要重启。`storage.data_root` 与 `storage.ops` 共同确定 Panel Token 和 session 数据目录。
+
 `storage.toml` 的 `storage.data_root` 与 `storage.world` 共同确定 WorldJournal SQLite 文件路径。WorldJournal 维护单行
 schema version；首版为 v1，后续每次 schema 改动必须提供 `vN → vN+1` SQLAlchemy migration 并更新版本。它同时维护
-per-scope sequence 与全局 insertion cursor，只保存世界提交，不归档 AgentTree，也不把数据库对象泄漏进节点契约。会话归档、费用库、记忆库与面板存储仍未定义。
+per-scope sequence 与全局 insertion cursor，只保存世界提交，不归档 AgentTree，也不把数据库对象泄漏进节点契约。Panel SQLite
+只保存认证 session，不是会话归档；费用库与独立记忆库仍未定义。
 
 ## 12. 当前范围之外
 
@@ -456,7 +473,7 @@ per-scope sequence 与全局 insertion cursor，只保存世界提交，不归�
 - continuation、Responses/Chat Completions 双通道重放和多 Provider 能力协商；
 - 自动长期记忆、embedding、mem0/Chroma 和终态投影；
 - 七类贡献端口、manifest、面向第三方的扩展注册表和生命周期装配；
-- Panel 后端、认证、附件和 WebSocket；
+- Panel 附件、WebSocket、静态文件托管、远程账号与多用户权限；
 - MCP Resources、Prompts、MCP Apps UI、sampling、elicitation、roots、`io.modelcontextprotocol/tasks` 与非文本工具结果；
 - 运行期 ToolRegistry 热替换、MCP 自动重连和跨重连效果幂等；
 - sandbox，以及远程日志收集、分布式 trace、审计归档和运行期日志重配置；
@@ -504,3 +521,6 @@ MCP Tasks 只是一种协议扩展，也不得映射为 Aurora Task；如未来�
     `NOT_AVAILABLE`；依赖边界测试确认没有 `src/platform`、AMP、Task 或七端口回流。
 20. `logging.toml` 在 World/MCP 启动效果前配置统一终端与轮转文件 logger；核心运行包的启动、结束、失败和效果未知路径有日志行为测试，
     且测试确认消息正文、Prompt、Tool 参数/结果、模型载荷、环境变量值与世界 data 不会进入项目日志。
+21. Panel bootstrap Token 可原子创建、复用和轮换，session 只以摘要持久化并可过期或登出；测试确认认证信息不进入日志、World、
+    URL 或操作目录。35 个 OperationSpec 中 34 个经认证 HTTP 暴露，`POST /console/clear` 保持 `text_only`。
+22. Panel server 只在最终 runtime 可运行且停止请求已绑定后 ready；bind 失败会逆序清理，shutdown 响应完成后再停止 HTTP。
