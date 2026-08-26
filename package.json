@@ -3,6 +3,7 @@
   "private": true,
   "version": "0.6.0",
   "description": "AuroraBot 文档站",
+  "packageManager": "pnpm@11.21.0",
   "scripts": {
     "dev": "pnpm vitepress dev . --host 0.0.0.0 --port 5173",
     "build": "pnpm vitepress build .",
