@@ -18,12 +18,12 @@ order: 1
 ## 克隆仓库
 
 ```bash
-git clone https://github.com/JuFireX/AuroraBot.git
+git clone https://github.com/AuroraBot-Dev/AuroraBot.git
 cd AuroraBot
 ```
 
 ::: tip
-或者你可以通过 [Releases](https://github.com/JuFireX/AuroraBot/releases) 下载最新稳定版本的源码压缩包, 并解压到 `AuroraBot` 目录下.
+或者你可以通过 [Releases](https://github.com/AuroraBot-Dev/AuroraBot/releases) 下载最新稳定版本的源码压缩包, 并解压到 `AuroraBot` 目录下.
 :::
 
 ## 快捷安装
