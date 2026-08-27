@@ -44,9 +44,9 @@ export default withSidebar(
       themeConfig: {
         nav: [
           { text: "快速开始", link: "/start/getting-started" },
-          { text: "架构", link: "/architecture/system-overview" },
-          { text: "应用开发", link: "/develop/agent-development" },
-          { text: "能力一览", link: "/reference/nightly-status" },
+          { text: "架构总览", link: "/architecture/system-overview" },
+          { text: "开发", link: "/develop/" },
+          { text: "常见问题", link: "/reference/faq" },
         ],
         search: {
           provider: "local",

@@ -1,46 +1,44 @@
 ---
-order: 15
+order: 2
 ---
 
-# 本地预览文档
+# 离线文档
 
-文档站使用 VitePress 1.6、Mermaid 和本地搜索。
+## 前置
 
-## 环境
-
-- Node.js LTS；
-- npm；
-- Git。
-
-## 克隆与安装
+- [Node.js](https://nodejs.org/) >= 18
+- [pnpm](https://pnpm.io/) >= 9
 
 ```bash
-git clone https://github.com/AuroraBot-Dev/docs.git AuroraBot-docs
-cd AuroraBot-docs
-npm ci
+npm install -g pnpm   # 如果尚未安装
 ```
 
-## 开发服务器
+## 快速开始
+
+在 AuroraBot 主仓根目录使用快捷脚本（`docs` 是 Git 子模块，`docs_setup` 会先初始化子模块）：
 
 ```bash
-npm run docs:dev
+# Linux / macOS
+./scripts/linux/docs_setup.sh        # 初始化子模块并安装依赖
+./scripts/linux/docs_preview.sh      # 本地预览，默认 http://localhost:5173
+./scripts/linux/docs_build.sh        # 生产构建，输出到 .vitepress/dist
+./scripts/linux/docs_update.sh       # 拉取子模块最新提交并更新依赖
+
+# Windows (PowerShell)
+.\scripts\windows\docs_setup.ps1
+.\scripts\windows\docs_preview.ps1
+.\scripts\windows\docs_build.ps1
+.\scripts\windows\docs_update.ps1
 ```
 
-默认地址为 `http://127.0.0.1:5173`，开发脚本会监听 `0.0.0.0`。
-
-## 生产构建
+也可以在主仓运行 `aurora setup`（初始化子模块并安装 docs 依赖），或在本目录直接使用 pnpm：
 
 ```bash
-npm run docs:build
+pnpm install
+pnpm dev        # 本地开发，默认 http://localhost:5173
+pnpm build      # 生产构建，输出到 .vitepress/dist
 ```
 
-输出位于 `.vitepress/dist`。构建会校验站内链接；不要用忽略死链掩盖已经不存在的页面。
-
-## 内容基准
-
-文档事实按以下顺序核对：
-
-1. nightly 分支的当前代码与测试；
-2. `architecture/` 按包拆分的解释页、主仓库 README 与代码注释。
-
-文档只描述已经实现的行为，不用路线图设想代替现状。
+::: tip
+文档站默认启动在 `localhost:5173/` 上. 打开浏览器访问即可.
+:::

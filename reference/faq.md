@@ -4,22 +4,60 @@ order: 2
 
 # 常见问题
 
-## `aurora start` 如何选择模型？
+## AuroraBot 支持哪些社交平台?
 
-root 和 child 显式保存 `models.roles` 中的 endpoint id，模型网关把 endpoint 固定映射到 provider/model，不从任何全局配置隐式推导。测试和嵌入应用仍可调用 `assemble_runtime()` 注入自定义 Model 与 Tools。
+::: tip
+对 AuroraBot 而言, 跨平台接入的关键不是框架能力 (框架已有), 而是**为每个平台编写对应的 App**。
+:::
 
-## `message` 为什么不是 `user`？
+AuroraBot 允许让任意 MCP 服务器以 App 形态接入:
 
-`message` 表示来自人或环境的平权事实。只有在模型供应商的协议边界上，adapter 才把它映射为协议的 `user` 角色——供应商的术语不改变事实的地位。
+- 任何遵循 MCP 协议的工具都可以成为 AuroraBot 的能力延伸
+- MCP 工具会被自动映射为内核可调用的命令
+- 内核无需感知 MCP 协议细节, 由适配容器统一处理
 
-## 每个 child 可以用不同模型吗？
+这意味着 **跨平台的概念将从"跨聊天平台"扩展到"跨工具生态"** -- 你的 AuroraBot 不仅能同时在 QQ、Telegram、Discord 上聊天, 还能调用任何 MCP 兼容的外部工具。
 
-可以。model 是节点的显式属性，也是委派参数和模型请求的一部分；便宜的小模型干杂活，贵的大模型把方向，各得其所。
+最终图景是一个 **一份认知, 多端感知** 的 Bot :
 
-## 没有人发消息时，它会做什么？
+```mermaid
+flowchart LR
+    subgraph INPUT["输入"]
+        QQ_IN["qq App"]
+        TG_IN["telegram App"]
+        DC_IN["discord App"]
+        ALARM["alarm App"]
+    end
 
-节律（cadence）把时间本身变成输入：每隔一段时间提交一次 tick，外部业务事件到达时按配置规则唤起一棵 AgentTree，由 Agent 自行判断要不要行动。
+    CORE["内核"]
 
-## 外部应用怎么接入？
+    subgraph OUTPUT["输出"]
+        QQ_OUT["QQ 发消息"]
+        TG_OUT["Telegram 发消息"]
+        DC_OUT["Discord 发消息"]
+        TOOL["调用外部工具"]
+    end
 
-两条路：通过 MCP 应用（stdio 或 HTTPS）把外部能力变成工具与事件；让 Agent 调用可见的发送类工具主动对外回复。本地 Panel 则提供一个经过认证的 HTTP 界面，调用与终端完全相同的操作目录。
+    QQ_IN --> CORE
+    TG_IN --> CORE
+    DC_IN --> CORE
+    ALARM --> CORE
+
+    CORE --> QQ_OUT
+    CORE --> TG_OUT
+    CORE --> DC_OUT
+    CORE --> TOOL
+```
+
+- 同一个大脑 (认知层) 处理来自不同平台的输入
+- 统一联合记忆在所有平台间共享, 跨平台上下文无缝衔接
+- App 只负责"感知"和"执行", 不参与决策 -- 决策由内核 + 认知统一做出
+- 用户可以随时添加新的 App 来接入新平台, 无需修改内核
+
+---
+
+## 其他
+
+::: info
+文档编写中
+:::
