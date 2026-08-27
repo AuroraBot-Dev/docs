@@ -1,17 +1,15 @@
 # AuroraBot 文档
 
-<p align="center">
-  <b>中文</b> | <a href="README.en.md">English</a> | <a href="README.ja.md">日本語</a>
-</p>
+<b>中文</b> | <a href="README.en.md">English</a> | <a href="README.ja.md">日本語</a>
 
 本目录是 AuroraBot 文档站的源码，基于 [VitePress](https://vitepress.dev/) 构建。
 
 ## 内容
 
-- **开始**：安装、配置与最小上手路径；
+- **开始**：认识 AuroraBot、安装配置与最小上手路径；
 - **架构**：系统总览、AgentTree 语义，以及按包拆分的 `architecture/packages/` 栏目；
-- **开发**：端口扩展方式与贡献治理；
-- **RFC**：唯一设计基准（`rfc/0300-unified-architecture-and-contracts.md`）。
+- **开发**：端口扩展方式与贡献指南；
+- **参考**：能力一览与常见问题。
 
 ## 前置
 
@@ -46,5 +44,3 @@ pnpm build      # 生产构建，输出到 .vitepress/dist
 .\scripts\windows\docs_preview.ps1
 .\scripts\windows\docs_build.ps1
 ```
-
-`docs_setup` 与 `docs_update` 会先通过 `git submodule update --init` 确保 `docs` 子模块已检出（未初始化时自动补上），再安装依赖；`docs_update` 会把子模块更新到远端最新提交，指针变化时需在主仓提交该变化。

@@ -52,7 +52,7 @@ MCP Tool 快照、其他外部注入 Tool 与 builtin 一次性合并为同一 `
 ## 世界访问权
 
 工具本身不默认持有 world。世界服务工具（`aur.serv.world.read`、`aur.serv.world.trees`）在组合时注入
-journal，未来收敛为只读 `WorldReader`。
+journal，以只读 `WorldReader` 视角使用。
 
 ## ops 入口
 

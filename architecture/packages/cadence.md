@@ -4,7 +4,7 @@ order: 11
 
 # src/cadence
 
-世界驱动的主动唤起策略。cadence 是“是否唤起一棵 AgentTree”的唯一决策者，当前用两层表驱动策略落地：
+世界驱动的主动唤起策略。cadence 是“是否唤起一棵 AgentTree”的唯一决策者，用两层表驱动策略落地：
 
 - 每隔 `tick_seconds`（默认 3600 秒）向世界提交一次 `cadence.tick`，scope 为 `aurora:cadence`；
 - reactive rule 在匹配的 `mcp.event.received` durable commit 后立即唤起指定 AgentTree；

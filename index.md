@@ -3,29 +3,29 @@ layout: home
 
 hero:
   name: AuroraBot
-  text: 一棵 AgentTree，一次完整运行
-  tagline: 同构节点 · 四角色上下文 · 树形委派
+  text: 让 Bot 拥有自己的生活
+  tagline: 给她完整的一生
   image:
     src: /logo.svg
     alt: AuroraBot Logo
   actions:
     - theme: brand
-      text: 认识当前核心
+      text: 认识 AuroraBot
       link: /start/overview
+    - theme: alt
+      text: 快速开始
+      link: /start/getting-started
     - theme: alt
       text: 架构总览
       link: /architecture/system-overview
-    - theme: alt
-      text: 唯一 RFC
-      link: /rfc/0300-unified-architecture-and-contracts
 
 features:
   - title: 一棵树就是一次运行
-    details: AgentTree 直接表达 root、children、消息、工具往返和最终结果，不再由多套运行状态间接拼合。
-  - title: 节点结构同构
-    details: root 与 child 使用同一种循环，只因 system profile、初始 message、可见 tools 和 LLM model 不同。
-  - title: 四角色上下文
-    details: 核心只承认 system、message、assistant 和 tool；Provider adapter 才处理供应商角色差异。
-  - title: 显式项目组合
-    details: 每个 TOML 和项目组件都有同名注册模块，统一构造 AuroraConfig、AgentTreeRunner 和 AuroraRuntime。
+    details: 从一句输入到最终结果，root 与 child 共用同一种循环，整段旅程是一棵可以回放的树。
+  - title: 事件平权
+    details: 人的消息、时间的流逝、外部应用的事件，都只是世界的变化，经由同一条世界线进入认知。
+  - title: 时间也是输入
+    details: 没有人说话时，节律会让 Agent 按自己的节奏醒来，自行判断要不要做点什么。
+  - title: 每一步都留痕
+    details: 输入、模型调用、工具执行全部记录在同一条因果链上，发生了什么一问便知。
 ---

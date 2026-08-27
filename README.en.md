@@ -1,17 +1,15 @@
 # AuroraBot Documentation
 
-<p align="center">
-  <a href="README.md">中文</a> | <b>English</b> | <a href="README.ja.md">日本語</a>
-</p>
+<a href="README.md">中文</a> | <b>English</b> | <a href="README.ja.md">日本語</a>
 
 This directory contains the source for the AuroraBot documentation site, built with [VitePress](https://vitepress.dev/).
 
 ## Contents
 
-- **Start**: Installation, configuration, and quick-start guide.
+- **Start**: Getting to know AuroraBot, installation, configuration, and quick-start guide.
 - **Architecture**: System overview, AgentTree semantics, and per-package `architecture/packages/` section.
 - **Development**: Port extension and contribution guidelines.
-- **RFC**: Single authoritative design baseline (`rfc/0300-unified-architecture-and-contracts.md`).
+- **Reference**: Capability overview and FAQ.
 
 ## Prerequisites
 
@@ -46,6 +44,3 @@ Or use scripts from the repository root (`docs` is a Git submodule; `docs_setup`
 .\scripts\windows\docs_preview.ps1
 .\scripts\windows\docs_build.ps1
 ```
-
-`docs_setup` and `docs_update` first ensure the `docs` submodule is checked out with `git submodule update --init` (initializing it when missing), then install dependencies. `docs_update` moves the submodule to the latest remote commit; commit the pointer change in the main repository when it changes.
-

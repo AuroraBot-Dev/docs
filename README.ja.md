@@ -1,17 +1,15 @@
 # AuroraBot ドキュメント
 
-<p align="center">
-  <a href="README.md">中文</a> | <a href="README.en.md">English</a> | <b>日本語</b>
-</p>
+<a href="README.md">中文</a> | <a href="README.en.md">English</a> | <b>日本語</b>
 
 このディレクトリは [VitePress](https://vitepress.dev/) で構築された AuroraBot ドキュメントサイトのソースです。
 
 ## コンテンツ
 
-- **スタート**: インストール、設定、クイックスタートガイド。
+- **スタート**: AuroraBot の紹介、インストール、設定、クイックスタートガイド。
 - **アーキテクチャ**: システム概要、AgentTree セマンティクス、パッケージ別 `architecture/packages/` セクション。
 - **開発**: ポート拡張方法とコントリビューションガイドライン。
-- **RFC**: 唯一の設計ベースライン（`rfc/0300-unified-architecture-and-contracts.md`）。
+- **参考**: できること一覧と FAQ。
 
 ## 前提条件
 
@@ -46,6 +44,3 @@ pnpm build      # 本番ビルド、.vitepress/dist に出力
 .\scripts\windows\docs_preview.ps1
 .\scripts\windows\docs_build.ps1
 ```
-
-`docs_setup` と `docs_update` は `git submodule update --init` で `docs` サブモジュールがチェックアウトされていることを確認（未初期化の場合は自動で初期化）してから依存関係をインストールします。`docs_update` はサブモジュールをリモートの最新コミットに更新します。ポインタが変わった場合は、メインリポジトリでその変更をコミットしてください。
-

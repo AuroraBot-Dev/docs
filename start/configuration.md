@@ -22,7 +22,7 @@ cp -r config.example config
 每个 TOML 由 `aurora.configuration` 中同相对路径的模块解析并注册。全部个人配置按显式注册顺序合并为一个 `AuroraConfig`。
 增加配置只需要一个 TOML、一个同路径 Python 模块和目录入口中的一条注册记录。
 
-`aurora config list` 列出注册名称与源文件，`aurora config show <name>` 原样显示一份 TOML。当前命令只读。
+`aurora config list` 列出注册名称与源文件，`aurora config show <name>` 原样显示一份 TOML。配置命令只读，不会修改你的文件。
 
 `aurora start` 在读取 TOML 前加载项目根目录的 `.env`。它只补充进程中尚不存在的环境变量，不覆盖调用方显式设置的
 值；文件不存在等同于没有额外环境输入。`.env` 仅存放本地密钥等环境值，不承担结构配置职责，并由 Git 忽略。

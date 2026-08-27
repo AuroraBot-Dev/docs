@@ -59,7 +59,7 @@ EnvironmentEvent；不拥有 AgentTree，不建立 Task、AMP、Activity、Platf
 该元数据优先于 `isError`，Host 必须原样保留 unknown。协商 v1 后，未带 unknown 元数据的 `isError` 表示 Server 确认没有
 不确定副作用。Host 在请求可能送达后遇到的无法分类协议错误也返回 unknown；只有发送前校验和明确拒绝返回 failed。
 
-成功结果优先确定性序列化 `structuredContent`，否则合并文本 content block。当前 transcript 只承载文本；图像、音频、
+成功结果优先确定性序列化 `structuredContent`，否则合并文本 content block。transcript 只承载文本；图像、音频、
 embedded resource、resource link 与其他非文本结果必须明确返回不支持错误，不能静默丢弃或写入原始二进制。
 
 ToolOutput 仍由 engine 记录 `tool.succeeded / failed / unknown` 并形成同一 call id 的 tool 消息。MCP 不写异步回执，
@@ -79,7 +79,7 @@ MCP 持有同一个 WorldJournal 的 `WorldWriter` 窄视角。生命周期与�
 `EnvironmentEvent(event_id, source, scope, kind, occurred_at, summary, data)`，再以 `mcp.event.received` 追加到载荷声明的
 业务 scope，并可附加 App scope。source 固定为 `mcp:<package>`。
 
-为迁移旧 Server，单个 App 可以显式启用受限的
+为兼容旧 Server，单个 App 可以显式启用受限的
 `notifications/message + logger=aurora/event` 转换；它使用同一载荷校验和 WorldWriter 边界。普通未协商 vendor notification
 不自动成为业务事实。适配器拒绝无稳定 event id、非法 scope/kind，以及伪造 `engine.*`、`tool.*`、`output.*`、
 `cadence.*`、`ops.*` 的载荷。
@@ -88,7 +88,7 @@ MCP 事件只进入 WorldJournal，不直接追加节点 transcript、完成 Too
 主动唤起仍由 cadence 在 durable commit 后按配置规则决定；发现 App 也不会隐式启动 heartbeat。运行时不做自动投递，reactive
 tree 的各节点 assistant 文本只回显到本地终端；对外回复由 Agent 显式调用可见的发送 Tool 完成，MCP 包本身不拥有回复策略。
 
-当前 Streamable HTTP 客户端不提供自定义长期 Server→Client 事件订阅，因此配置不得组合该 transport 与 `world_events`。
+Streamable HTTP 客户端不提供自定义长期 Server→Client 事件订阅，因此配置不得组合该 transport 与 `world_events`。
 通知只有 best-effort 语义，没有 Aurora 级 ACK、重放或送达证明；event id 只保证 Host 实际收到后的幂等提交。Server 与 ops 可以
 报告发送尝试或已提交事实，不能声称通知已送达。断线丢失不建立恢复队列。
 

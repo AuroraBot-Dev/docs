@@ -49,4 +49,4 @@ MCP Server 上报的业务事件只追加 WorldJournal。它不会直接成为�
 
 workerAgent、memoryAgent、gateAgent 这类“具体 Agent”应表现为 `AgentDefinition` 预设（prompt + model + tools + children），
 而不是 `AgentNode` 的 Python 子类。特化行为优先实现为 Tool 或 prompt；只有证明无法由现有节点表达的新概念才允许进入核心。
-MCP sampling、elicitation、roots、Tasks 也不能成为隐藏 Agent 或独立运行模型。
+MCP 的 sampling、elicitation、roots、Tasks 在 AuroraBot 里不映射为隐藏 Agent 或独立运行模型。

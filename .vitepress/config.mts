@@ -7,12 +7,12 @@ export default withSidebar(
     defineConfig({
       lang: "zh-CN",
       title: "AuroraBot 文档站",
-      description: "AuroraBot — 以 AgentTree 探索自主智能体最小循环",
+      description: "AuroraBot — 一棵 AgentTree，一次完整运行",
       base: "/",
       cleanUrls: true,
       lastUpdated: true,
       ignoreDeadLinks: false,
-      srcExclude: ["README.md", "README.*.md"],
+      srcExclude: ["README.md", "README.*.md", "rfc/**"],
       head: [
         [
           "link",
@@ -21,6 +21,10 @@ export default withSidebar(
       ],
       vite: {
         optimizeDeps: {
+          include: [
+            "fastdom",
+            "fastdom/extensions/fastdom-promised.js",
+          ],
           exclude: [
             "@nolebase/vitepress-plugin-enhanced-readabilities/client",
             "vitepress",
@@ -58,7 +62,7 @@ export default withSidebar(
           { text: "开始", link: "/start/getting-started" },
           { text: "架构", link: "/architecture/system-overview" },
           { text: "开发", link: "/develop/agent-development" },
-          { text: "Nightly 状态", link: "/reference/nightly-status" },
+          { text: "能力一览", link: "/reference/nightly-status" },
         ],
         search: {
           provider: "local",
@@ -103,6 +107,7 @@ export default withSidebar(
         ".vitepress/**",
         "node_modules/**",
         "public/**",
+        "rfc/**",
         "README*",
       ],
     },

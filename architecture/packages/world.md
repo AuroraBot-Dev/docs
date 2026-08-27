@@ -29,7 +29,7 @@ order: 3
 3. **commit_id 由提交方决定**：可重放事件必须使用确定 ID；一次性事实允许随机 ID。
 4. **世界不产生事件**：tick、input、config 变更与 MCP 外部事实由 console / cadence / ops / mcp 等生产者提交。
 
-## 当前事件 kind
+## 事件 kind 一览
 
 | kind | 来源 | 典型 scope |
 | --- | --- | --- |

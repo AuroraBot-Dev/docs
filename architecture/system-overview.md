@@ -4,6 +4,8 @@ order: 1
 
 # 系统总览
 
+下面的图有点密，但不难读：它从上到下讲了一次启动的过程——先读配置，再初始化世界线，再发现 MCP 工具，最后组装出整个运行时。把它当成一张地图，需要时再放大看。
+
 ```text
 config.example/（源码模板） ──复制──→ config/（个人配置，Git 忽略）
                                       │
@@ -57,7 +59,7 @@ AgentTree 热路径：
            └─ DelegationRequest → child AgentNode
 
 MCP 外部事实：
-  双方严格协商 v1 的 stdio world-events / 受限 legacy event
+  双方严格协商 v1 的 stdio world-events / 兼容旧 Server 的受限 event
     → src/mcp 校验 EnvironmentEvent
     → WorldWriter.append_event
     → WorldJournal（不直接写 transcript，不直接启动 AgentTree）
@@ -104,7 +106,6 @@ MCP Tool 因果：
 | `src/memory` | 只读消费者 | `WorldReader` |
 | `src/engine` | 因果记录者 + delta 读者 | `WorldJournal` |
 | `src/ai` | 不持有 | 无 |
-| 未来 `src/sandbox` | 不持有 | 无 |
 
 ## 依赖方向
 
@@ -115,5 +116,5 @@ console ← aurora；ops ← aurora
 ```
 
 `src` 不导入 `aurora` 或 `ops`；`ops` 不导入 `src` 或 `aurora`；`src/world` 只被
-`aurora.composition.world` 引用。`src/mcp` 只依赖 contracts、MCP SDK 与 HTTP 客户端，不导入 tools、engine，
-也不恢复 `src/platform`、AMP、Task、Activity 或七端口扩展体系。
+`aurora.composition.world` 引用。`src/mcp` 只依赖 contracts、MCP SDK 与 HTTP 客户端，
+不导入 tools 或 engine。

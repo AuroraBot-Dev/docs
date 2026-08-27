@@ -40,8 +40,7 @@ npm run docs:build
 
 文档事实按以下顺序核对：
 
-1. 主仓库 [RFC 0300](https://github.com/AuroraBot-Dev/AuroraBot/blob/nightly/docs/rfc/0300-unified-architecture-and-contracts.md)；
-2. nightly 当前 contracts、配置和测试；
-3. `architecture/` 按包拆分的实施架构页、主仓库 README 与代码注释。
+1. nightly 分支的当前代码与测试；
+2. `architecture/` 按包拆分的解释页、主仓库 README 与代码注释。
 
-若模块尚未形成公共边界，文档应明确写“文档正在编写中”，不能用路线图设想冒充已实现功能。
+文档只描述已经实现的行为，不用路线图设想代替现状。

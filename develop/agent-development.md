@@ -9,7 +9,7 @@ order: 1
 新增普通工具时实现 `Tool.definition` 和异步 `Tool.execute(call)`，然后在组合根调用中注入。新增模型时实现异步
 `Model.complete(request)` 并返回 assistant `ChatMessage`。Provider 特有 role 或 JSON 形状只能存在于 `src/ai` adapter。
 
-新增整个 `src` 包或运行时端口前，先按 [新包扩展基线](../architecture/packages/package-baseline.md) 确定契约、
+新增整个 `src` 包或运行时端口前，先按 [新增一个包](../architecture/packages/package-baseline.md) 确定契约、
 世界访问权、ops 入口与组合成本。
 
-修改树操作、消息顺序或完成规则前先更新唯一 RFC，并补充 fake Model/Tool 的离线行为测试。
+修改树操作、消息顺序或完成规则时，补充 fake Model/Tool 的离线行为测试。

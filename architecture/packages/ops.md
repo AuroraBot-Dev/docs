@@ -44,7 +44,7 @@ ops/
 4. 在 `ops/registry._load_all()` 的显式元组增加模块名；
 5. handler 先用 `require_port(context.runtime.<pkg>, "<pkg>")` 取窄端口；端口未装配时统一返回 `NOT_AVAILABLE`。
 
-## 当前入口
+## 入口一览
 
 | 域 | 读取 | 写入/动作 |
 | --- | --- | --- |
