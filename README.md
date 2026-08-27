@@ -7,7 +7,7 @@
 ## 内容
 
 - **开始**：认识 AuroraBot、安装配置与最小上手路径；
-- **架构**：系统总览、AgentTree 语义，以及按包拆分的 `architecture/packages/` 栏目；
+- **架构**：系统总览、按包拆分的 `architecture/packages/` 栏目等；
 - **开发**：端口扩展方式与贡献指南；
 - **参考**：能力一览与常见问题。
 
@@ -22,25 +22,26 @@ npm install -g pnpm   # 如果尚未安装
 
 ## 快速开始
 
-```bash
-cd docs
-pnpm install
-pnpm dev        # 本地开发，默认 http://localhost:5173
-pnpm build      # 生产构建，输出到 .vitepress/dist
-```
-
-也可从仓库根目录使用脚本（`docs` 是 Git 子模块，`docs_setup` 会先初始化子模块）：
+在 AuroraBot 主仓根目录使用快捷脚本（`docs` 是 Git 子模块，`docs_setup` 会先初始化子模块）：
 
 ```bash
 # Linux / macOS
 ./scripts/linux/docs_setup.sh        # 初始化子模块并安装依赖
+./scripts/linux/docs_preview.sh      # 本地预览，默认 http://localhost:5173
+./scripts/linux/docs_build.sh        # 生产构建，输出到 .vitepress/dist
 ./scripts/linux/docs_update.sh       # 拉取子模块最新提交并更新依赖
-./scripts/linux/docs_preview.sh      # 本地预览（或 scripts/macos/docs_*.command）
-./scripts/linux/docs_build.sh        # 生产构建
 
 # Windows (PowerShell)
 .\scripts\windows\docs_setup.ps1
-.\scripts\windows\docs_update.ps1
 .\scripts\windows\docs_preview.ps1
 .\scripts\windows\docs_build.ps1
+.\scripts\windows\docs_update.ps1
+```
+
+也可以在主仓运行 `aurora setup`（初始化子模块并安装 docs 依赖），或在本目录直接使用 pnpm：
+
+```bash
+pnpm install
+pnpm dev        # 本地开发，默认 http://localhost:5173
+pnpm build      # 生产构建，输出到 .vitepress/dist
 ```

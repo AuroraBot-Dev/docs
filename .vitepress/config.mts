@@ -7,35 +7,20 @@ export default withSidebar(
     defineConfig({
       lang: "zh-CN",
       title: "AuroraBot 文档站",
-      description: "AuroraBot — 一棵 AgentTree，一次完整运行",
+      description: "AuroraBot — 让 Bot 过上自己的生活",
       base: "/",
       cleanUrls: true,
       lastUpdated: true,
       ignoreDeadLinks: false,
       srcExclude: ["README.md", "README.*.md", "rfc/**"],
-      head: [
-        [
-          "link",
-          { rel: "icon", type: "image/svg+xml", href: "/logo.svg" },
-        ],
-      ],
+      head: [["link", { rel: "icon", type: "image/svg+xml", href: "/logo.svg" }]],
       vite: {
         optimizeDeps: {
-          include: [
-            "fastdom",
-            "fastdom/extensions/fastdom-promised.js",
-          ],
-          exclude: [
-            "@nolebase/vitepress-plugin-enhanced-readabilities/client",
-            "vitepress",
-            "@nolebase/ui",
-          ],
+          include: ["fastdom", "fastdom/extensions/fastdom-promised.js"],
+          exclude: ["@nolebase/vitepress-plugin-enhanced-readabilities/client", "vitepress", "@nolebase/ui"],
         },
         ssr: {
-          noExternal: [
-            "@nolebase/vitepress-plugin-enhanced-readabilities",
-            "@nolebase/ui",
-          ],
+          noExternal: ["@nolebase/vitepress-plugin-enhanced-readabilities", "@nolebase/ui"],
         },
       },
       mermaid: {
@@ -58,18 +43,15 @@ export default withSidebar(
       },
       themeConfig: {
         nav: [
-          { text: "首页", link: "/" },
-          { text: "开始", link: "/start/getting-started" },
+          { text: "快速开始", link: "/start/getting-started" },
           { text: "架构", link: "/architecture/system-overview" },
-          { text: "开发", link: "/develop/agent-development" },
+          { text: "应用开发", link: "/develop/agent-development" },
           { text: "能力一览", link: "/reference/nightly-status" },
         ],
         search: {
           provider: "local",
         },
-        socialLinks: [
-          { icon: "github", link: "https://github.com/AuroraBot-Dev/AuroraBot" },
-        ],
+        socialLinks: [{ icon: "github", link: "https://github.com/AuroraBot-Dev/AuroraBot" }],
         outline: {
           label: "本页内容",
         },
@@ -103,13 +85,7 @@ export default withSidebar(
       includeFolderIndexFile: false,
       sortMenusByFrontmatterOrder: true,
       frontmatterOrderDefaultValue: 1000,
-      excludeByGlobPattern: [
-        ".vitepress/**",
-        "node_modules/**",
-        "public/**",
-        "rfc/**",
-        "README*",
-      ],
+      excludeByGlobPattern: [".vitepress/**", "node_modules/**", "public/**", "rfc/**", "README*"],
     },
   ],
 );
