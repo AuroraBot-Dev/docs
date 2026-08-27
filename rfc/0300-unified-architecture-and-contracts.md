@@ -333,7 +333,7 @@ transcript；适配器必须返回明确的不支持错误，直到未来内容�
 
 | 包 | 职责 | 可依赖 |
 | --- | --- | --- |
-| `src/utils` | 无项目语义的日志、时间、文本与序列化工具 | 标准库 |
+| `src/utils` | 无项目语义的日志、时间、文本与序列化工具 | 标准库、loguru |
 | `src/contracts` | Chat、Tool、Model、AgentTree 与世界线不可变值对象和端口 | 标准库 |
 | `src/agents` | 不可变 AgentDefinition 目录与唯一解析 | contracts |
 | `src/prompt` | 四角色 PromptAssembler | contracts |
@@ -388,7 +388,7 @@ ops 的 `OperationSpec`、`OperationRouter` 与操作处理器保持适配器中
 `aurora.utils`，不得下沉后让 `src` 反向理解项目目录。
 
 进程日志是运行诊断，不是世界事实：日志不得写入 WorldJournal、AgentNode transcript 或 Tool 结果，也不能替代已有的因果提交。
-`src.utils.logging` 提供唯一的非传播 logger、终端 handler 与轮转文件 handler；`aurora start` 在配置加载完成后、WorldJournal 和 MCP
+`src.utils.logging` 提供基于 loguru 的统一 logger、线程安全的终端 sink 与轮转文件 sink；`aurora start` 在配置加载完成后、WorldJournal 和 MCP
 产生启动效果前应用 `logging.toml`，后续注册的 logger 继承同一状态。项目拥有的运行模块只在稳定边界记录结构化参数：INFO 表示
 启动、就绪和关闭等生命周期，WARNING 表示已经被处理的降级或效果未知，ERROR/exception 表示当前操作失败，DEBUG 表示不改变
 行为的计数、ID 和阶段。日志不得包含环境变量值、认证信息、消息正文、Prompt、Tool 参数或结果正文、模型原始请求/响应、世界提交
