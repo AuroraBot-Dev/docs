@@ -273,7 +273,8 @@ schema、参数解析、保留名或单独路由分支。项目组合的 `aurora
 该 App 的 `timeout_seconds` 单一截止时间约束，不能只给单次 `tools/call` 设置超时。目录变化监听必须在首次 `tools/list`
 之前建立，且同一协议通知只能由一个权威接收路径处理。监听到启动中的目录变化时，本次分页结果作废；实现可以在剩余截止时间内
 重新完整分页，也可以使启动失败，但不得冻结已经知道过期的目录。raw tool name 与配置 package 组合为
-`aur.mcp.<package>.<raw_name>`；package 与 raw name 必须能直接组成合法、稳定、小写的 Aurora Tool ID，不做静默改名。
+`aur.mcp.<package>.<raw_name>`，不做静默改名：package 段保持项目规定的小写点分包名；raw name 段是第三方 App 的
+外部命名事实，只要求 `[A-Za-z]` 开头、其余 `[A-Za-z0-9_-]`，允许第三方风格（如 `Screenshot`），不强制小写化。
 description 与 object JSON Schema 进入 `ToolDefinition`，执行器保留 package/raw-name 反向路由。空名称、非 object schema、
 重复领域 ID 或任一启用 App 启动失败，都使整体启动失败并逆序回收已建立的连接和子进程。
 

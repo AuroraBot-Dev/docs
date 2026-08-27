@@ -22,8 +22,9 @@ EnvironmentEvent；不拥有 AgentTree，不建立 Task、AMP、Activity、Platf
 每个 enabled App 依次完成连接、协议协商和完整分页 `tools/list`；这整个启动事务共用 `timeout_seconds` 截止时间。
 目录监听在首次分页前建立，并且同一 notification 只进入一个接收路径。启动窗口若收到目录变化，本次分页作废；只能在剩余
 截止时间内重新完整分页或失败，不能冻结已知过期快照。raw name 与 package 直接组成
-`aur.mcp.<package>.<raw_name>`；空名称、非法小写 Tool ID、非 object input schema、重复 ID 或任一 App 启动失败都会使
-整体启动失败，并逆序回收已经建立的连接和子进程。
+`aur.mcp.<package>.<raw_name>`；package 段保持小写点分包名，raw name 段以 `[A-Za-z]` 开头、其余 `[A-Za-z0-9_-]`，
+保留第三方命名风格（如 `Screenshot`）不做小写化。空名称、非法 Tool ID、非 object input schema、重复 ID 或任一 App 启动
+失败都会使整体启动失败，并逆序回收已经建立的连接和子进程。
 
 全部 App 发现成功后，MCP Tool 快照才交给 `src/tools`，与 builtin 和调用方注入 Tool 一次性合并为不可变 ToolRegistry；
 随后才校验 AgentDefinition 的精确 Tool 引用并允许 engine 接受 AgentTree。

@@ -33,7 +33,8 @@ MCP Tool 快照、其他外部注入 Tool 与 builtin 一次性合并为同一 `
 
 ## MCP 与冻结边界
 
-- raw name 与 App package 组合为 `aur.mcp.<package>.<raw_name>`，registry 不替 MCP 静默改名；
+- raw name 与 App package 组合为 `aur.mcp.<package>.<raw_name>`，registry 不替 MCP 静默改名；package 与框架 ID 段保持
+  小写，raw name 段是第三方命名事实，允许 `[A-Za-z]` 开头的大小写风格；
 - 全部 App 完整分页 `tools/list` 后才允许构造 registry，并在构造时拒绝跨来源冲突；
 - registry 构造后不可变；`tools/list_changed` 只使 MCP 状态显示 `restart_required=true`；
 - 当前没有 reload、hot replace 或自动重连后的目录重绑定；断线只改变执行可用性，不改变 definition；
