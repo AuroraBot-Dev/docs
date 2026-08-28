@@ -7,6 +7,9 @@
   "scripts": {
     "dev": "pnpm vitepress dev . --host 0.0.0.0 --port 5173",
     "build": "pnpm vitepress build .",
+    "preview": "pnpm vitepress preview .",
+    "clean": "node ./scripts/clean.mjs",
+    "reinstall": "pnpm run clean -- --del-lock && pnpm install",
     "typecheck": "tsc --noEmit",
     "docs:dev": "pnpm vitepress dev . --host 0.0.0.0 --port 5173",
     "docs:build": "pnpm vitepress build ."

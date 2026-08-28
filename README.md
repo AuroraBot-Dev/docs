@@ -35,4 +35,7 @@ aurora docs build    # 生产构建，输出到 .vitepress/dist
 pnpm install
 pnpm dev        # 本地开发，默认 http://localhost:5173
 pnpm build      # 生产构建，输出到 .vitepress/dist
+pnpm preview    # 预览生产构建产物
+pnpm clean      # 清理 node_modules 与构建缓存
+pnpm reinstall  # 清理后重装依赖（--del-lock 会连锁文件一起删）
 ```

@@ -35,4 +35,7 @@ aurora docs build    # 本番ビルド、.vitepress/dist に出力
 pnpm install
 pnpm dev        # ローカル開発サーバー、デフォルト http://localhost:5173
 pnpm build      # 本番ビルド、.vitepress/dist に出力
+pnpm preview    # 本番ビルドのプレビュー
+pnpm clean      # node_modules とビルドキャッシュを削除
+pnpm reinstall  # クリーン後に依存関係を再インストール（--del-lock でロックファイルも削除）
 ```

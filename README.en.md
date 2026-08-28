@@ -35,4 +35,7 @@ Alternatively, use pnpm directly in this directory:
 pnpm install
 pnpm dev        # local dev server, default http://localhost:5173
 pnpm build      # production build, output to .vitepress/dist
+pnpm preview    # preview the production build
+pnpm clean      # clean node_modules and build caches
+pnpm reinstall  # clean and reinstall dependencies (--del-lock also removes the lockfile)
 ```
