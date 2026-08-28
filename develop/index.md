@@ -19,7 +19,7 @@ AuroraBot 想做的不是一个工具一般的 Agent，而是一个能够持续�
 
 ## 准备开发环境
 
-### 1. 克隆本仓库
+### 1. 克隆仓库
 
 需要 Python 3.12（推荐，以上版本未经充分验证）、Git 和 [uv](https://docs.astral.sh/uv/)。
 文档或面板开发还需要 [Node.js](https://nodejs.org/) 与 [pnpm](https://pnpm.io/)。
@@ -32,7 +32,7 @@ cd AuroraBot
 # Windows: .\scripts\windows\setup.ps1.
 ```
 
-`setup.sh` 会把 aurora 安装到用户工具目录，并完成依赖同步、个人配置以及 docs/panel 子模块引导。
+`setup.sh` 会检查 git/uv/pnpm，询问是否将 aurora 全局链接到用户工具目录，然后由 `aurora setup` 完成依赖同步、个人配置以及 docs/panel 子模块引导。
 
 ### 2. 填写必要配置
 

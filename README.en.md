@@ -22,23 +22,14 @@ npm install -g pnpm   # if not already installed
 
 ## Quick Start
 
-Use the shortcut scripts from the AuroraBot repository root (`docs` is a Git submodule; `docs_setup` initializes it first):
+`docs` is a Git submodule. Run `aurora setup` in the main repository to initialize the submodule and install dependencies; then drive this directory's pnpm scripts with `aurora docs` from the main repository root:
 
 ```bash
-# Linux / macOS
-./scripts/linux/docs_setup.sh        # initialize submodule and install dependencies
-./scripts/linux/docs_preview.sh      # local dev server, default http://localhost:5173
-./scripts/linux/docs_build.sh        # production build, output to .vitepress/dist
-./scripts/linux/docs_update.sh       # pull the latest submodule commit and update dependencies
-
-# Windows (PowerShell)
-.\scripts\windows\docs_setup.ps1
-.\scripts\windows\docs_preview.ps1
-.\scripts\windows\docs_build.ps1
-.\scripts\windows\docs_update.ps1
+aurora docs dev      # local dev server, default http://localhost:5173
+aurora docs build    # production build, output to .vitepress/dist
 ```
 
-Alternatively, run `aurora setup` in the main repository (initializes submodules and installs docs dependencies), or use pnpm directly in this directory:
+Alternatively, use pnpm directly in this directory:
 
 ```bash
 pnpm install

@@ -22,23 +22,14 @@ npm install -g pnpm   # まだインストールしていない場合
 
 ## クイックスタート
 
-AuroraBot メインリポジトリのルートでクイックスクリプトを使用します（`docs` は Git サブモジュールで、`docs_setup` が最初にサブモジュールを初期化します）：
+`docs` は Git サブモジュールです。メインリポジトリで `aurora setup` を実行するとサブモジュールの初期化と依存関係のインストールが行われ、その後メインリポジトリのルートから `aurora docs` でこのディレクトリの pnpm スクリプトを実行できます：
 
 ```bash
-# Linux / macOS
-./scripts/linux/docs_setup.sh        # サブモジュールの初期化と依存関係のインストール
-./scripts/linux/docs_preview.sh      # ローカルプレビュー、デフォルト http://localhost:5173
-./scripts/linux/docs_build.sh        # 本番ビルド、.vitepress/dist に出力
-./scripts/linux/docs_update.sh       # サブモジュールを最新に更新し依存関係を更新
-
-# Windows (PowerShell)
-.\scripts\windows\docs_setup.ps1
-.\scripts\windows\docs_preview.ps1
-.\scripts\windows\docs_build.ps1
-.\scripts\windows\docs_update.ps1
+aurora docs dev      # ローカル開発サーバー、デフォルト http://localhost:5173
+aurora docs build    # 本番ビルド、.vitepress/dist に出力
 ```
 
-メインリポジトリで `aurora setup` を実行する（サブモジュールの初期化と docs の依存関係のインストール）か、このディレクトリで直接 pnpm を使用することもできます：
+このディレクトリで直接 pnpm を使用することもできます：
 
 ```bash
 pnpm install
