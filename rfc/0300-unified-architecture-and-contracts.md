@@ -349,14 +349,21 @@ transcript；适配器必须返回明确的不支持错误，直到未来内容�
 | `aurora` | 项目配置、分阶段组合根、项目 runtime 与 CLI | 所有下层包 |
 
 依赖方向固定为 `utils/contracts ← agents/prompt/ai/world/memory/cadence/mcp`、`agents/contracts ← tools ← engine ← aurora`，`console ← aurora`，
-`ops ← aurora`；ops 与 src 互不导入。除 `src.world` 外的认知核心不依赖配置加载器、数据库、Web 框架、MCP SDK 或具体
+`ops ← aurora`。ops 作为持有 AuroraAssembly 的 backend，运行时只许依赖 `aurora.composer`/`aurora.config`/`aurora.configuration` 与
+`src.contracts`/`src.utils`；src 功能包与 `aurora.runtime`/`aurora.composition`/`aurora.views` 不进入 ops 的运行时导入
+（类型位置允许 TYPE_CHECKING）。除 `src.world` 外的认知核心不依赖配置加载器、数据库、Web 框架、MCP SDK 或具体
 Provider；`src/mcp` 作为协议适配叶子例外依赖 MCP SDK，但不依赖 tools、engine、aurora 或 ops。`src` 不导入 `aurora` 或 `ops`。
+
+`contracts` 与 `utils` 是唯一可被任何包运行时直接引用的基础设施叶子。功能 src 包之间不运行时相互引用：跨包能力只经组合层
+构造并注入的实例在运行期调用，类型位置只允许 `TYPE_CHECKING` 导入。上表“可依赖”列表示逻辑类型依赖，不代表运行时 import 边。
 
 规划但尚未实现的包只保留 `src/sandbox`；它不持有 world。sandbox 进入实现前必须使用同一注册基线与 ops 入口模式，
 且不得反向侵入现有包。
 
 `ops` 保留统一操作体系的标准设计：一个 `OperationSpec` 同时描述 method/path 资源入口和斜杠文本入口，参数只解析一次，
-处理器统一返回 `OperationResult`。操作按领域模块显式注册，目录可自描述。它只经组合根注入的窄端口观察或请求改动：
+处理器统一返回 `OperationResult`。操作按领域模块显式注册，目录可自描述。`OpsRuntime(assembly, process)` 直接持有唯一
+AuroraAssembly：监测窄端口与领域→JSON 投影在 ops 侧自取，aurora 不再装配端口或书写投影；只有进程面能力（树运行与 echo、
+停止、config reload）由 aurora.runtime 实现并经单一 process 协议传入。ops 只能观察或请求改动：
 
 - 运行监测读取当前及已完成的 AgentTree、节点、状态和 transcript 投影，以及指定 scope 的有界世界提交索引；
 - 运行改动只能请求 AuroraRuntime 发起一棵新树或提交一条环境事实，不直接替换节点或追加消息；提交环境事实不会自动启动树；
@@ -399,14 +406,19 @@ summary/data；这些内容只能留在其已有领域边界。第三方库日�
 - `aurora.commands`：每个 CLI 命令一个模块，由命令目录统一注册；命令实现不进入 `main.py`；`config list` 与
   `config show <name>` 只读取注册目录和源文件，不修改配置；
 - `aurora.configuration`：每个 TOML 文件对应一个同名 Python 模块；模块定义自己的纯配置值、解析器和注册函数；
-- `aurora.composition`：每个需要项目实例的 `src` 子包对应一个同名 Python 模块；模块声明自己需要的实例并注册构造结果；
-  其中 agents 模块先从纯配置构造 AgentDefinition 目录，mcp 模块接收异步阶段已冻结的 MCP runtime，tools 模块再用该目录构造
-  `aur.agent.delegate` 并与外部注入工具、冻结 MCP Tool 组成唯一注册表；world 模块按 `storage.toml` 构造 WorldJournal 并作为第一个注册器提供单例，console 模块向 TerminalConsole
-  注入同一单例的 `WorldWriter`，engine 模块消费模型、提示词、工具与世界实例并完成跨目录引用校验；
+- `aurora.composition`：每个需要项目实例的 `src` 子包对应一个同名代表模块；模块只导出自身键、`provides`、按键名声明的
+   `requires` 与 `construct` 构造器，兄弟能力一律到构造期经组合上下文按键名取已构造实例，代表模块之间不运行时相互 import
+   （类型位置允许 TYPE_CHECKING），也不直接调用兄弟包的构造函数。`aurora.composition.__init__` 作为注册表校验每个键名只有
+   一个提供者，把 requires 键名解析为依赖边的代表主键并合成模块规格，再交给通用组合器按拓扑顺序装配。具体分工保持：
+   agents 模块先从纯配置构造 AgentDefinition 目录，mcp 模块接收异步阶段已冻结的 MCP runtime，tools 模块再用该目录构造
+   `aur.agent.delegate` 并与外部注入工具、冻结 MCP Tool 组成唯一注册表；world 模块按 `storage.toml` 构造 WorldJournal 并提供
+   单例，console 模块向 TerminalConsole 注入同一单例的 `WorldWriter`，engine 模块消费模型、提示词、工具与世界实例并完成跨
+   目录引用校验；
 - `aurora.config`：按配置目录的显式注册顺序加载全部 TOML，并合并为一个只读 `AuroraConfig`；
-- `aurora.composer`：为分阶段组合提供类型化实例键、构造上下文和只读结果，不知道具体 `src` 子包；
+- `aurora.composer`：为组合提供类型化实例键、`PackageSpec`/`ModuleSpec`、按键名读取的构造上下文与只读 `AuroraAssembly`，
+   不知道具体 `src` 子包；`AuroraAssembly` 同时冻结组合期使用的 `AuroraConfig` 与全部已构造实例，作为 runtime 拆取的唯一产物；
 - `aurora.runtime`：在异步进程边界中先应用日志配置并初始化唯一 WorldJournal，再连接并完整发现 MCP，然后把同一 world 实例与冻结的 MCP Tool 集合
-  交给同步组合，并从组合结果取得最终 runner 和项目入口配置。启动顺序固定为 world 初始化 → MCP 连接/发现 →
+   交给同步组合，从唯一的 `AuroraAssembly`（含 `AuroraConfig`）构造进程门面，并把该门面作为单一 process 协议交给 ops。启动顺序固定为 world 初始化 → MCP 连接/发现 →
   ToolRegistry 冻结 → AgentDefinition 跨目录校验 → engine 可运行 → 绑定统一停止请求 → Panel ready → cadence 后台启动；
   发现完成和停止请求绑定前不得接受 HTTP AgentTree。关闭时先停止 HTTP 接入，再停止 cadence、MCP 与 world。
 - `aurora start`：首先读取项目根目录的 `.env`，且不覆盖进程已有环境变量；随后加载个人配置并应用进程日志，从已注册模型端点构造
