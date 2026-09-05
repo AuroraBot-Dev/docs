@@ -401,34 +401,41 @@ summary/data；这些内容只能留在其已有领域边界。第三方库日�
 
 `aurora` 虽不属于认知核心，仍保留以下必要的增长边界：
 
-- `aurora.commands`：每个 CLI 命令一个模块，由命令目录统一注册；命令实现不进入 `main.py`；`config list` 与
+- `aurora.commands`：每个 CLI 命令一个模块，目录入口按文件名排序自动发现同时导出 `COMMAND + execute` 的模块；命令实现不进入 `main.py`；`config list` 与
   `config show <name>` 只读取注册目录和源文件，不修改配置；
-- `aurora.configuration`：每个 TOML 文件对应一个同名 Python 模块；模块定义自己的纯配置值、解析器和注册函数；
+- `aurora.configuration`：每个 TOML 文件对应一个同名 Python 模块；模块定义自己的纯配置值、解析器并导出唯一 `CONFIG_SPEC`，目录入口按文件名排序自动发现；
 - `aurora.composition`：每个需要项目实例的 `src` 子包对应一个同名代表模块；模块只导出自身键、`provides`、按键名声明的
-   `requires` 与 `construct` 构造器，兄弟能力一律到构造期经组合上下文按键名取已构造实例，代表模块之间不运行时相互 import
-   （类型位置允许 TYPE_CHECKING），也不直接调用兄弟包的构造函数。`aurora.composition.__init__` 作为注册表校验每个键名只有
-   一个提供者，把 requires 键名解析为依赖边的代表主键并合成模块规格，再交给通用组合器按拓扑顺序装配。具体分工保持：
-   agents 模块先从纯配置构造 AgentDefinition 目录，mcp 模块接收异步阶段已冻结的 MCP runtime，tools 模块再用该目录构造
-   `aur.agent.delegate` 并与外部注入工具、冻结 MCP Tool 组成唯一注册表；world 模块按 `storage.toml` 构造 WorldJournal 并提供
-   单例，console 模块向 TerminalConsole 注入同一单例的 `WorldWriter`，engine 模块消费模型、提示词、工具与世界实例并完成跨
-   目录引用校验；
+   `requires`、多值 `contributes/consumes` 与 `construct` 构造器，目录入口按文件名排序自动发现唯一 `PACKAGE_SPEC`。兄弟能力一律
+   到构造期经组合上下文按实例键名或稳定贡献键取得，代表模块之间不运行时相互 import（类型位置允许 TYPE_CHECKING），也不直接
+   调用兄弟包的构造函数。唯一实例键仍只有一个提供者；贡献键允许任意数量的模块追加同类型值，消费方自动依赖全部已发现贡献者，
+   零贡献是合法状态。通用组合器校验键名、贡献声明和依赖环并按拓扑顺序装配，不知道具体 `src` 子包。
+   Tool 是第一个多值贡献点：mcp、调用者注入和未来 TTS 等能力都向稳定 Tool 贡献键追加 `Tool`，agents 用完整贡献集合解析可见名称，
+   tools 用同一集合与框架内建工具冻结唯一 `ToolRegistry`；新增 Tool 提供者不得修改 agents、tools 或 runtime。
+   `PackageSpec` 还可声明异步 `prepare/activate/run/close` hook。prepare 在本模块 construct 前执行并可返回失败清理函数；activate 在
+   Assembly 完成后按显式 activation-after 依赖执行；run 由统一生命周期以后台任务运行；close 与 prepare cleanup 逆序执行。
+   无 hook 的普通模块不承担运行期成本；新增需要连接、后台循环或关闭的能力只修改自己的代表模块。具体分工保持：agents 模块从纯配置
+   和完整 Tool 贡献目录构造 AgentDefinition 目录，mcp 模块在 prepare 中完成连接与工具发现并贡献冻结 Tool；world 模块在 prepare
+   中初始化唯一 WorldJournal；cadence 模块自行声明初始化和后台循环；console 模块向 TerminalConsole 注入同一 WorldWriter；engine
+   模块消费模型、提示词、工具与世界实例并完成跨目录引用校验；
 - `aurora.config`：按配置目录的显式注册顺序加载全部 TOML，并合并为一个只读 `AuroraConfig`；
 - `aurora.composer`：为组合提供类型化实例键、`PackageSpec`/`ModuleSpec`、按键名读取的构造上下文与只读 `AuroraAssembly`，
    不知道具体 `src` 子包；`AuroraAssembly` 同时冻结组合期使用的 `AuroraConfig` 与全部已构造实例，作为 runtime 拆取的唯一产物；
-- `aurora.runtime`：在异步进程边界中先应用日志配置并初始化唯一 WorldJournal，再连接并完整发现 MCP，然后把同一 world 实例与冻结的 MCP Tool 集合
-   交给同步组合并产生唯一 `AuroraAssembly`（含 `AuroraConfig`）。启动准备不产生世界提交；启动顺序固定为 world 初始化 → MCP
-  连接/发现 → ToolRegistry 冻结 → AgentDefinition 跨目录校验 → Assembly 完成 → cadence cursor 固定 → MCP 业务事件入口激活 →
-  cadence 后台启动。Panel 后端默认不启动；Console 收到 `/serve` 后才从同一 Assembly 构造只读 OpsRuntime，并在同一事件循环
-  启动 HTTP 服务。关闭时先停止已经显式启动的 HTTP 接入，再停止 cadence、MCP 与 world。
+- `aurora.runtime`：在异步进程边界中应用日志配置后，把自动发现的 PackageSpec 交给统一生命周期；生命周期按依赖执行 prepare +
+   construct、冻结唯一 `AuroraAssembly`，再执行 activate 并启动 run hook。启动准备不产生世界提交；由模块声明得到的顺序必须等价于
+   world 初始化 → MCP 连接/发现与 Tool 贡献冻结 → ToolRegistry 冻结 → AgentDefinition 跨目录校验 → Assembly 完成 → cadence
+   cursor 固定 → MCP 业务事件入口激活 → cadence 后台启动。Panel 后端默认不启动；Console 收到 `/serve` 后才从同一 Assembly
+   构造只读 OpsRuntime，并在同一事件循环启动 HTTP 服务。关闭时先停止已经显式启动的 HTTP 接入，再由生命周期取消 run task、
+   逆序执行模块 close 与 prepare cleanup；runtime 不按 world、MCP、cadence 或未来能力名称增加启动/关闭分支。
 - `aurora start`：首先读取项目根目录的 `.env`，且不覆盖进程已有环境变量；随后加载个人配置并应用进程日志，从已注册模型端点构造
   Model，组合一个 AuroraRuntime，并统一管理 Panel、Console、停止事件和 SIGINT/SIGTERM；`--headless` 只禁用 Console。当前没有
   Platform，因此不接受或伪装平台选择参数；
 - `aurora.utils`：只保存无项目语义的功能工具，例如子进程执行与 TOML 字段读取。
 
-命令、配置和组合使用同一种扩展成本：新增一个并列模块，并在对应目录入口增加一条显式注册记录。中心加载器、
-`AuroraConfig`、通用合成器和 runtime 不因新增配置文件或中间组件而增加分支。注册顺序是确定性的；重复配置键、重复实例键
-和读取尚未注册的依赖都立即失败。配置值不直接使用 PromptCatalog、AgentTreeRunner 等实现期对象；从配置形状到运行对象的
-转换只发生在 composition。只提供契约或纯函数、无需项目实例的 `src` 子包不需要空的 composition 模块。
+命令、配置、组合和 ops 操作模块都按目录约定自动发现，文件名排序保证确定性；新增并列能力只增加该能力自己的配置模板、
+configuration/composition/src/ops 文件，不修改目录入口、Tool 聚合方或 runtime。自动发现范围只包括随 AuroraBot 安装的内部包，
+不读取 entry point、用户路径或第三方 manifest。重复配置键、重复实例键、未声明依赖、贡献类型冲突和依赖环都立即失败。
+配置值不直接使用 PromptCatalog、AgentTreeRunner 等实现期对象；从配置形状到运行对象的转换只发生在 composition。只提供契约或
+纯函数、无需项目实例的 `src` 子包不需要空的 composition 模块。
 
 ## 11. 配置与存储
 
@@ -466,7 +473,7 @@ WARNING），log_dir 必须是项目内相对目录。运行日志固定写入�
 结构。文件不存在时按空环境处理；`.env` 与 `config/` 一样属于个人文件，不进入源码发布或 Git 跟踪。
 
 模板与个人目录保持相同拓扑。每个 TOML 只由同相对路径的 configuration 模块解析；通用加载器不包含文件名、字段名或具体
-配置类型分支。新增结构配置时，增加一个模板 TOML、一个同路径 configuration 模块和一条注册记录。密钥只来自环境变量。
+配置类型分支。新增结构配置时，只增加一个模板 TOML 与一个导出 `CONFIG_SPEC` 的同路径 configuration 模块。密钥只来自环境变量。
 
 `runtime.panel` 定义 enabled、loopback host、port、唯一 frontend URL、精确 allowed origins、是否打开浏览器与 session TTL；
 这些值在进程启动时冻结，配置 reload 后需要重启。`storage.data_root` 与 `storage.ops` 共同确定 Panel Token 和 session 数据目录。
@@ -484,7 +491,7 @@ per-scope sequence 与全局 insertion cursor，只保存世界提交，不归�
 - 独立 Task、Agent mailbox、Activity、因果投影和 output publication 状态机；
 - continuation、Responses/Chat Completions 双通道重放和多 Provider 能力协商；
 - 自动长期记忆、embedding、mem0/Chroma 和终态投影；
-- 七类贡献端口、manifest、面向第三方的扩展注册表和生命周期装配；
+- 七类业务贡献端口、manifest、面向第三方的扩展注册表；内部 PackageSpec 的通用贡献槽与生命周期 hook 不构成第三方插件协议；
 - Panel 附件、WebSocket、静态文件托管、远程账号与多用户权限；
 - MCP Resources、Prompts、MCP Apps UI、sampling、elicitation、roots、`io.modelcontextprotocol/tasks` 与非文本工具结果；
 - 运行期 ToolRegistry 热替换、MCP 自动重连和跨重连效果幂等；
