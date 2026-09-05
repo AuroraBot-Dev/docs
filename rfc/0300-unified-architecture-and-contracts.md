@@ -22,8 +22,7 @@ AuroraBot 是以 Bot 为主体、以 AgentTree 为一次认知运行的自主智
 统一操作目录及本地 Panel 适配、本地 Console、持久化世界提交日志、只读近期世界记忆、世界驱动的主动节律，以及 MCP 2.x 客户端适配；
 每个运行时包在 ops 中拥有 JSON 化指令入口。MCP 只把外部工具映射为统一 Tool，把外部事实映射为 World 提交，
 不引入第二套 Agent、Task、消息总线或运行循环。Panel 只观察和调用同一 ops 目录，不建立平行运行模型；当前不包含远程部署、
-sandbox 或通用第三方运行时扩展体系。项目提供面向 MCP App 的进程外包管理命令，但安装结果仍只通过现有
-`apps.toml` 与 `extensions/apps/` 进入启动组合，不产生新的运行时 Plugin、Manifest 或 Lifecycle 公共抽象。
+sandbox 或通用第三方扩展生态。
 
 最小循环只有五个基本概念：
 
@@ -403,8 +402,7 @@ summary/data；这些内容只能留在其已有领域边界。第三方库日�
 `aurora` 虽不属于认知核心，仍保留以下必要的增长边界：
 
 - `aurora.commands`：每个 CLI 命令一个模块，由命令目录统一注册；命令实现不进入 `main.py`；`config list` 与
-  `config show <name>` 只读取注册目录和源文件，不修改配置；`app search/install/remove/list` 是进程外 MCP App
-  包管理入口，只访问 GitHub 仓库目录、项目内安装目录和个人 `apps.toml`，不得连接运行中的 MCP 或热改 ToolRegistry；
+  `config show <name>` 只读取注册目录和源文件，不修改配置；
 - `aurora.configuration`：每个 TOML 文件对应一个同名 Python 模块；模块定义自己的纯配置值、解析器和注册函数；
 - `aurora.composition`：每个需要项目实例的 `src` 子包对应一个同名代表模块；模块只导出自身键、`provides`、按键名声明的
    `requires` 与 `construct` 构造器，兄弟能力一律到构造期经组合上下文按键名取已构造实例，代表模块之间不运行时相互 import
@@ -457,29 +455,6 @@ stdio App 必须声明 `working_dir + command`，不得声明 URL；Streamable H
 不开放 TOML 选择另一 SDK 主版本。为兼容已有个人配置，省略 `event_mode` 等价于安全的 `disabled`；启用现代扩展或受限 legacy
 转换仍必须显式填写对应模式。
 
-可安装的本地 MCP App 仓库使用 GitHub topic `aurorabot-app` 参与发现，并在仓库根目录提供 `aurora-app.toml`。
-清单版本字段固定为 `manifest_version = 1`；`[package]` 声明稳定 id、名称、版本和简介，`[app]` 只声明
-command、env、timeout_seconds 与 event_mode，
-transport 固定为 stdio，enabled 与 working_dir 由安装方决定，仓库不能要求任意项目外路径。`aurora app search` 使用
-GitHub Repository Search 的 `topic:aurorabot-app` 条件，并显式接受 page 与 page-size；可选 Token 只从 `GITHUB_TOKEN`
-读取。GitHub 返回内容只能用于展示和选择，不能替代安装后的本地清单校验。
-topic 只声明仓库类型，不证明协议实现；清单中的 command 必须启动 stdio MCP Server，真实 MCP initialize、能力协商与
-工具发现仍由下一次 `aurora start` 的现有 McpRuntime 完成。当前 package manager 不安装普通 Python 插件、Prompt 包或
-AgentDefinition 包。
-
-`aurora app install <owner/repo>` 只接受 GitHub 仓库标识，先验证 topic，再把指定 ref（默认远端默认分支）克隆到
-`extensions/apps/<owner>/<repo>` 的同盘临时目录；完整解析清单并用现有 App DTO 规则校验后，写入由管理器生成的安装标记，
-再向个人 `config/apps.toml` 追加一条启用的 `[[app]]`。安装器记录解析后的 commit 与 package 版本，但不执行仓库代码或
-依赖安装命令。清单必须是 checkout 根目录内的普通文件，不得通过 symlink 或 junction 读取仓库外路径；合法的空
-`app = []` 配置可作为首次安装起点。目录发布与 TOML 更新组成可回滚事务：任一步失败都不得留下
-可见的半安装目录或配置条目。不得覆盖已有目录、已有 package 或同一仓库的安装。
-
-`aurora app list` 只列出带有效管理标记的安装，并同时报告其配置 enabled 状态和目录是否完整；不把手工配置的远程
-App 冒充为已安装包。`aurora app remove <package>` 只允许移除位于默认安装根目录、标记与配置相互匹配的管理安装；
-安装根自身不得是 symlink 或 junction，标记中的 repository 必须与实际 `<owner>/<repo>` 路径一致；
-它先把目录移动到同盘隔离位置，再删除对应 `[[app]]`，配置写入失败时恢复目录，成功后才清理隔离目录。install/remove
-使用 tomlkit 保留个人配置中的无关条目、顺序与注释，且只修改 `config/apps.toml`；变更在下次启动后生效。
-
 `platforms.toml` 只保存 MCP 总开关与终端诊断偏好，不由此恢复通用 Platform、Manifest 或七端口体系。App enabled、目录或 schema 变化只在
 重启后生效。`ops` 对现有 App 的 enabled 改动仍保留 TOML 注释，并返回 `restart_required=true`。
 
@@ -509,7 +484,7 @@ per-scope sequence 与全局 insertion cursor，只保存世界提交，不归�
 - 独立 Task、Agent mailbox、Activity、因果投影和 output publication 状态机；
 - continuation、Responses/Chat Completions 双通道重放和多 Provider 能力协商；
 - 自动长期记忆、embedding、mem0/Chroma 和终态投影；
-- 七类贡献端口、通用运行时 manifest、面向第三方的扩展注册表和生命周期装配；MCP App 的进程外安装清单不属于该体系；
+- 七类贡献端口、manifest、面向第三方的扩展注册表和生命周期装配；
 - Panel 附件、WebSocket、静态文件托管、远程账号与多用户权限；
 - MCP Resources、Prompts、MCP Apps UI、sampling、elicitation、roots、`io.modelcontextprotocol/tasks` 与非文本工具结果；
 - 运行期 ToolRegistry 热替换、MCP 自动重连和跨重连效果幂等；
@@ -563,5 +538,3 @@ MCP Tasks 只是一种协议扩展，也不得映射为 Aurora Task；如未来�
     URL 或操作目录。全部 OperationSpec 都是经认证 HTTP 暴露的 GET 观察操作，认证登录与登出不属于操作目录。
 22. Panel server 只在最终 Assembly 已激活且 Console 显式执行 `/serve` 后 ready；重复执行幂等，bind 失败只报告本地错误而不停止
     Bot，进程关闭时先停止已经启动的 HTTP 服务。
-23. MCP App 搜索分页、GitHub 错误、清单校验、重复安装、事务回滚、受管列表与安全移除均使用 fake GitHub/clone 和临时目录
-    离线测试；测试不得访问网络、用户配置或项目外目录。
