@@ -170,8 +170,9 @@ model requested/completed/failed、tool requested/succeeded/failed/unknown、out
 MCP 业务事件累计到 `evoke_every` 后，最多请求启动一棵批量 triage AgentTree。Cadence 只产生 `TreeLaunchRequest`，不得直接
 创建或修改节点。全局 stream 必须逐提交推进 durable cursor；一次树运行期间新到达的提交不得因跳到 stream head 而丢弃。
 
-MCP 生命周期与目录事实使用 `mcp.app.starting/ready/failed/disconnected` 和
-`mcp.catalog.frozen/changed`，归属 `aurora:mcp:<package>` scope。MCP 业务事件使用 `mcp.event.received`，
+MCP 的连接、协商、启动失败与初始目录冻结属于进程准备状态，只进入日志和 ops 快照，不形成世界提交。最终 Assembly
+激活后的连接中断与冻结目录变化分别使用 `mcp.app.disconnected` 和 `mcp.catalog.changed`，归属
+`aurora:mcp:<package>` scope。MCP 业务事件使用 `mcp.event.received`，
 至少归属载荷声明的业务 scope，并可同时归属 App scope；source 固定为 `mcp:<package>`。MCP 适配器必须拒绝伪造
 `engine.*`、`tool.*`、`output.*`、`cadence.*` 或 `ops.*` 保留事件的载荷。
 
@@ -232,9 +233,10 @@ Provider、Console、MCP、定时器和未来平台都是这两个端口之外�
 EventSource、ControlAction、ContextContributor、OutputSink、Projector、Manifest 或 Lifecycle 公共体系。
 
 Console 是本地终端前端，持有组合根注入的 `WorldWriter` 单例。每条非空输入先在 `aurora:console` scope 提交
-`console.input`，再交给可注入文本分派端口：普通文本由组合根映射为“启动新 AgentTree”，斜杠文本交给 ops 的
-统一目录；它不导入 ops、aurora 或 engine，不保存 AgentTree，也不拥有 Tool。终端只负责异步读行、历史、中文渲染、清屏和
-停止协调；渲染输出是本地调试途径，不进入世界线。进程退出是 ops 的显式操作，Console 仅执行操作结果携带的终端控制语义。
+`console.input`，再交给可注入文本分派端口：普通文本由组合根映射为“启动新 AgentTree”；`/help`、`/clear`、`/quit`
+与 `/serve` 是 Console 本地命令，分别负责显示本地帮助、清屏、请求停止当前进程，以及在同一事件循环中按需启动本地 Panel
+后端。Console 不复用 ops 操作目录，不导入 ops、aurora 或 engine，不保存 AgentTree，也不拥有 Tool。终端只负责异步读行、
+历史、中文渲染、清屏和停止协调；渲染输出是本地调试途径，不进入世界线。
 
 工具域由 `src.tools` 独立实现，包含工具注册表与框架内建工具。注册表是本次进程组合形成的扁平、不可变目录，并同时承担：
 
@@ -344,8 +346,8 @@ transcript；适配器必须返回明确的不支持错误，直到未来内容�
 | `src/memory` | 从世界线生成有界近期 MemorySnapshot | contracts |
 | `src/cadence` | 世界驱动 tick 与 AgentTree 唤起决策 | contracts |
 | `src/mcp` | MCP 2.x 连接、发现、Tool 适配与事件写入 | contracts、mcp SDK、httpx2 |
-| `src/console` | 本地异步终端、终端控制 DTO 与输入世界事件 | contracts、prompt-toolkit |
-| `ops` | 热路径外的操作资源树、运行监测、显式改动入口与本地 Panel HTTP 适配 | 标准库、tomlkit、aiosqlite、FastAPI、Uvicorn、Rich |
+| `src/console` | 本地异步终端、本地命令与输入世界事件 | contracts、prompt-toolkit |
+| `ops` | 热路径外的只读观察资源树与本地 Panel HTTP 适配 | 标准库、aiosqlite、FastAPI、Uvicorn |
 | `aurora` | 项目配置、分阶段组合根、项目 runtime 与 CLI | 所有下层包 |
 
 依赖方向固定为 `utils/contracts ← agents/prompt/ai/world/memory/cadence/mcp`、`agents/contracts ← tools ← engine ← aurora`，`console ← aurora`，
@@ -360,20 +362,16 @@ Provider；`src/mcp` 作为协议适配叶子例外依赖 MCP SDK，但不依赖
 规划但尚未实现的包只保留 `src/sandbox`；它不持有 world。sandbox 进入实现前必须使用同一注册基线与 ops 入口模式，
 且不得反向侵入现有包。
 
-`ops` 保留统一操作体系的标准设计：一个 `OperationSpec` 同时描述 method/path 资源入口和斜杠文本入口，参数只解析一次，
-处理器统一返回 `OperationResult`。操作按领域模块显式注册，目录可自描述。`OpsRuntime(assembly, process)` 直接持有唯一
-AuroraAssembly：监测窄端口与领域→JSON 投影在 ops 侧自取，aurora 不再装配端口或书写投影；只有进程面能力（树运行与 echo、
-停止、config reload）由 aurora.runtime 实现并经单一 process 协议传入。ops 只能观察或请求改动：
+`ops` 保留统一只读观察体系：一个 `OperationSpec` 描述一个 GET method/path 资源入口，处理器统一返回 `OperationResult`。
+操作按领域模块显式注册，目录可自描述。`OpsRuntime(assembly)` 直接持有唯一 AuroraAssembly，监测窄端口与领域→JSON 投影
+在 ops 侧自取，aurora 不装配端口或书写投影。ops 不接收 Tree、进程停止、配置 reload 或其他写入协议：
 
-- 运行监测读取当前及已完成的 AgentTree、节点、状态和 transcript 投影，以及指定 scope 的有界世界提交索引；
-- 运行改动只能请求 AuroraRuntime 发起一棵新树或提交一条环境事实，不直接替换节点或追加消息；提交环境事实不会自动启动树；
+- 运行监测读取 Assembly 已公开的 Agent、Tool、Prompt、模型、World、Memory、Cadence 与 MCP 状态；当前不开放运行中
+  AgentTree 的创建、控制或进程内快照；
 - 配置监测读取 `AuroraConfig` 的注册目录和个人 TOML；
-- 配置改动当前只允许切换 `apps.toml` / `extensions.toml` 中既有条目的 `enabled`，保留注释，并在值发生变化时返回
-  `restart_required = true`；不得修改 `config.example/`；
 - 每个运行时包在 ops 中拥有自己的窄 RuntimePort 与操作模块：engine、config、agents、tools、prompt、ai、world、console、
-  cadence、memory、mcp
-  均有 method/path 与斜杠入口；成功数据经 `OperationResult.success` 返回并由终端以 JSON 渲染，端口未装配时统一返回
-  `NOT_AVAILABLE`。写入类操作成功后由对应运行时记录世界事实，纯读操作不产生提交；
+  cadence、memory、mcp 均只提供 GET method/path；成功数据经 `OperationResult.success` 返回，端口未装配时统一返回
+  `NOT_AVAILABLE`。观察操作不产生世界提交，也不修改配置或实例状态；
 - ops 不拥有第二份运行状态，不进入 AgentTreeRunner 热路径；engine 只通过通用观察回调发布不可变树快照，不依赖 ops。
 
 ops 的 `OperationSpec`、`OperationRouter` 与操作处理器保持适配器中立。`ops.panel` 是消费同一目录的本地 HTTP 适配层：
@@ -383,12 +381,12 @@ ops 的 `OperationSpec`、`OperationRouter` 与操作处理器保持适配器中
 - session 使用独立随机 Token，明文只在登录响应出现一次，SQLite 只保存摘要、创建时间与过期时间；登出立即撤销当前 session；
 - 删除 `Token.txt` 后重启会生成新 Token 并撤销全部旧 session；首次生成时终端显示完整 Token，后续启动只显示文件路径；
 - Token 与 session 不进入日志、World、OperationResult、URL query 或异常文本；Uvicorn access log 关闭；
-- CORS 只接受配置中的精确 Origin，Host 必须是本地绑定地址；HTTP adapter 严格区分 path/query/JSON body 并拒绝未知参数；
-- `GET /api/ops` 返回目录，`GET|POST /api/ops/{path}` 调用现有 OperationRouter。`text_only` 操作保留在目录但不经 HTTP 暴露；
+- CORS 只接受配置中的精确 Origin，Host 必须是本地绑定地址；HTTP adapter 严格区分 path/query 并拒绝未知参数；
+- `GET /api/ops` 返回目录，`GET /api/ops/{path}` 调用现有 OperationRouter；除认证登录与登出外，Panel API 不接受 POST；
 - HTTP adapter 可以保存认证数据，但不保存 AgentTree、世界提交或第二份运行状态，也不得把认证判断放入 operation handler。
 
-当前 Panel 不包含附件、WebSocket、静态文件托管或进程日志读取。前端用现有轮询操作观察 Tree 与 World；发送消息等价于显式
-`POST /trees`，不会恢复 Session、Activity 或 mailbox。
+当前 Panel 不包含附件、WebSocket、静态文件托管、进程日志读取或任何 Bot 写操作。前端只轮询观察 Assembly 暴露的状态，
+不能发送消息、启动 AgentTree、提交世界事件、修改配置、触发 Cadence 或停止进程。
 
 `src.utils` 只保留没有上层包依赖的通用实现。WorldJournal 的 SQLAlchemy ORM 与迁移只归 `src.world` 所有；项目配置加载、
 子进程命令等组合层工具仍属于
@@ -418,9 +416,10 @@ summary/data；这些内容只能留在其已有领域边界。第三方库日�
 - `aurora.composer`：为组合提供类型化实例键、`PackageSpec`/`ModuleSpec`、按键名读取的构造上下文与只读 `AuroraAssembly`，
    不知道具体 `src` 子包；`AuroraAssembly` 同时冻结组合期使用的 `AuroraConfig` 与全部已构造实例，作为 runtime 拆取的唯一产物；
 - `aurora.runtime`：在异步进程边界中先应用日志配置并初始化唯一 WorldJournal，再连接并完整发现 MCP，然后把同一 world 实例与冻结的 MCP Tool 集合
-   交给同步组合，从唯一的 `AuroraAssembly`（含 `AuroraConfig`）构造进程门面，并把该门面作为单一 process 协议交给 ops。启动顺序固定为 world 初始化 → MCP 连接/发现 →
-  ToolRegistry 冻结 → AgentDefinition 跨目录校验 → engine 可运行 → 绑定统一停止请求 → Panel ready → cadence 后台启动；
-  发现完成和停止请求绑定前不得接受 HTTP AgentTree。关闭时先停止 HTTP 接入，再停止 cadence、MCP 与 world。
+   交给同步组合并产生唯一 `AuroraAssembly`（含 `AuroraConfig`）。启动准备不产生世界提交；启动顺序固定为 world 初始化 → MCP
+  连接/发现 → ToolRegistry 冻结 → AgentDefinition 跨目录校验 → Assembly 完成 → cadence cursor 固定 → MCP 业务事件入口激活 →
+  cadence 后台启动。Panel 后端默认不启动；Console 收到 `/serve` 后才从同一 Assembly 构造只读 OpsRuntime，并在同一事件循环
+  启动 HTTP 服务。关闭时先停止已经显式启动的 HTTP 接入，再停止 cadence、MCP 与 world。
 - `aurora start`：首先读取项目根目录的 `.env`，且不覆盖进程已有环境变量；随后加载个人配置并应用进程日志，从已注册模型端点构造
   Model，组合一个 AuroraRuntime，并统一管理 Panel、Console、停止事件和 SIGINT/SIGTERM；`--headless` 只禁用 Console。当前没有
   Platform，因此不接受或伪装平台选择参数；
@@ -515,10 +514,11 @@ MCP Tasks 只是一种协议扩展，也不得映射为 Aurora Task；如未来�
 6. 非法树、非法角色顺序、重复或错配 call id、越界上下文都在效果发生前失败；
 7. 除 WorldJournal 的临时 SQLite 集成测试外，fake Model 与 fake Tool 可在无网络、无环境变量时跑通测试；
 8. 当前 Python runtime 不再导入第 11 节已移除的生产化子系统，活动架构文档不再把它们描述为现行能力。
-9. fake Model 下可通过 Console 完成普通文本 → AgentTree → assistant → 终端输出，并通过斜杠操作查询状态和停止进程；
+9. fake Model 下可通过 Console 完成普通文本 → AgentTree → assistant → 终端输出；`/help`、`/clear`、`/quit` 与 `/serve`
+   作为本地命令不经过 ops；
 10. `aurora start --headless` 与 Console 模式共享同一组合和停止路径，测试不依赖网络、密钥或真实终端；
-11. 终端输入在分派前产生 `console.input` 世界提交；ops 的每个包目录与单项命令在终端输出 JSON，端口未装配时返回
-    `NOT_AVAILABLE` 而不是崩溃。
+11. 终端输入在分派前产生 `console.input` 世界提交；ops 只通过 HTTP 暴露 GET 观察目录，端口未装配时返回
+    `NOT_AVAILABLE` 而不是崩溃，所有观察操作不产生世界提交或配置改动。
 12. cadence 只通过 `TreeLaunchRequest` 唤起 AgentTree，memory 只以显式快照参数进入 PromptAssembler，两者均有独立离线测试。
 13. 项目依赖 MCP Python SDK 2.x；现代测试 Server 协商 `2026-07-28`，旧修订版兼容测试仍由 SDK v2 完成并显式报告协商版本。
 14. stdio 与 Streamable HTTP 均可在 App 的单一启动截止时间内完整分页发现 Tool；目录监听在首次分页前建立且没有重复接收路径，
@@ -535,5 +535,6 @@ MCP Tasks 只是一种协议扩展，也不得映射为 Aurora Task；如未来�
 20. `logging.toml` 在 World/MCP 启动效果前配置统一终端与轮转文件 logger；核心运行包的启动、结束、失败和效果未知路径有日志行为测试，
     且测试确认消息正文、Prompt、Tool 参数/结果、模型载荷、环境变量值与世界 data 不会进入项目日志。
 21. Panel bootstrap Token 可原子创建、复用和轮换，session 只以摘要持久化并可过期或登出；测试确认认证信息不进入日志、World、
-    URL 或操作目录。35 个 OperationSpec 中 34 个经认证 HTTP 暴露，`POST /console/clear` 保持 `text_only`。
-22. Panel server 只在最终 runtime 可运行且停止请求已绑定后 ready；bind 失败会逆序清理，shutdown 响应完成后再停止 HTTP。
+    URL 或操作目录。全部 OperationSpec 都是经认证 HTTP 暴露的 GET 观察操作，认证登录与登出不属于操作目录。
+22. Panel server 只在最终 Assembly 已激活且 Console 显式执行 `/serve` 后 ready；重复执行幂等，bind 失败只报告本地错误而不停止
+    Bot，进程关闭时先停止已经启动的 HTTP 服务。
