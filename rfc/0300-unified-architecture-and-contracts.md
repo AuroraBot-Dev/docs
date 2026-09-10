@@ -410,7 +410,13 @@ summary/data；这些内容只能留在其已有领域边界。第三方库日�
    调用兄弟包的构造函数。唯一实例键仍只有一个提供者；贡献键允许任意数量的模块追加同类型值，消费方自动依赖全部已发现贡献者，
    零贡献是合法状态。通用组合器校验键名、贡献声明和依赖环并按拓扑顺序装配，不知道具体 `src` 子包。
    Tool 是第一个多值贡献点：mcp、调用者注入和未来 TTS 等能力都向稳定 Tool 贡献键追加 `Tool`，agents 用完整贡献集合解析可见名称，
-   tools 用同一集合与框架内建工具冻结唯一 `ToolRegistry`；新增 Tool 提供者不得修改 agents、tools 或 runtime。
+    tools 用同一集合与框架内建工具冻结唯一 `ToolRegistry`；新增 Tool 提供者不得修改 agents、tools 或 runtime。
+    项目进程门面由同目录的 `runtime` 代表模块声明：它按实际依赖构造 `RuntimeFactory`，在最终 Assembly 完成后创建
+    `AuroraRuntime`，从而让 Bot 的世界与森林使用同一组已冻结实例。工厂只捕获 runner、agents、root 配置、console 与 world，
+    不捕获可继续写入的 CompositionContext；门面不为了转存实例而持有 Memory、MCP 或 Cadence。
+    `TREE_LAUNCHER_BINDINGS` 是接收 `TreeLauncher` 的同步绑定函数贡献点；cadence 在自身 construct 中贡献 `bind_launcher`，
+    runtime 模块消费完整绑定集合，工厂创建门面后逐一接线。绑定仅连接已构造实例，不执行外部效果；绑定完成后才允许生命周期
+    activate/run。该贡献点只服务 Bot 的统一认知唤起端口，不向贡献者暴露整个 Assembly 或进程控制。
    `PackageSpec` 还可声明异步 `prepare/activate/run/close` hook。prepare 在本模块 construct 前执行并可返回失败清理函数；activate 在
    Assembly 完成后按显式 activation-after 依赖执行；run 由统一生命周期以后台任务运行；close 与 prepare cleanup 逆序执行。
    无 hook 的普通模块不承担运行期成本；新增需要连接、后台循环或关闭的能力只修改自己的代表模块。具体分工保持：agents 模块从纯配置
@@ -419,9 +425,11 @@ summary/data；这些内容只能留在其已有领域边界。第三方库日�
    模块消费模型、提示词、工具与世界实例并完成跨目录引用校验；
 - `aurora.config`：按配置目录的显式注册顺序加载全部 TOML，并合并为一个只读 `AuroraConfig`；
 - `aurora.composer`：为组合提供类型化实例键、`PackageSpec`/`ModuleSpec`、按键名读取的构造上下文与只读 `AuroraAssembly`，
-   不知道具体 `src` 子包；`AuroraAssembly` 同时冻结组合期使用的 `AuroraConfig` 与全部已构造实例，作为 runtime 拆取的唯一产物；
+    不知道具体 `src` 子包；`AuroraAssembly` 同时冻结组合期使用的 `AuroraConfig` 与全部已构造实例，包含 runtime 工厂；
 - `aurora.runtime`：在异步进程边界中应用日志配置后，把自动发现的 PackageSpec 交给统一生命周期；生命周期按依赖执行 prepare +
-   construct、冻结唯一 `AuroraAssembly`，再执行 activate 并启动 run hook。启动准备不产生世界提交；由模块声明得到的顺序必须等价于
+    construct、冻结唯一 `AuroraAssembly`，入口仅取出 runtime 工厂创建门面并完成端口绑定，再执行 activate 并启动 run hook。
+    `runtime/assembly.py` 只适配调用者注入参数并调用工厂，不维护门面协作者清单或替具体模块绑定端口；`runtime/core.py`
+    只持有实际使用的注入协作者，不读取组合键或配置规格。启动准备不产生世界提交；由模块声明得到的顺序必须等价于
    world 初始化 → MCP 连接/发现与 Tool 贡献冻结 → ToolRegistry 冻结 → AgentDefinition 跨目录校验 → Assembly 完成 → cadence
    cursor 固定 → MCP 业务事件入口激活 → cadence 后台启动。Panel 后端默认不启动；Console 收到 `/serve` 后才从同一 Assembly
    构造只读 OpsRuntime，并在同一事件循环启动 HTTP 服务。关闭时先停止已经显式启动的 HTTP 接入，再由生命周期取消 run task、
