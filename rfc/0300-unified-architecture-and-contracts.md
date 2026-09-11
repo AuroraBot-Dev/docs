@@ -339,25 +339,27 @@ transcript；适配器必须返回明确的不支持错误，直到未来内容�
 | `src/contracts` | Chat、Tool、Model、AgentTree 与世界线不可变值对象和端口 | 标准库 |
 | `src/agents` | 不可变 AgentDefinition 目录与唯一解析 | contracts |
 | `src/prompt` | 四角色 PromptAssembler | contracts |
-| `src/tools` | 不可变工具注册表、统一路由与框架内建工具 | contracts、agents |
-| `src/engine` | AgentTree 的确定性最小循环 | contracts、agents、prompt、tools |
+| `src/tools` | 不可变工具注册表、统一路由与框架内建工具 | contracts |
+| `src/engine` | AgentTree 的确定性最小循环 | contracts |
 | `src/ai` | LiteLLM 模型网关与 OpenAI-compatible 协议映射 | contracts、litellm |
 | `src/world` | SQLAlchemy WorldJournal、ORM 模型与版本迁移 | contracts、SQLAlchemy、aiosqlite |
 | `src/memory` | 从世界线生成有界近期 MemorySnapshot | contracts |
 | `src/cadence` | 世界驱动 tick 与 AgentTree 唤起决策 | contracts |
 | `src/mcp` | MCP 2.x 连接、发现、Tool 适配与事件写入 | contracts、mcp SDK、httpx2 |
 | `src/console` | 本地异步终端、本地命令与输入世界事件 | contracts、prompt-toolkit |
+| `src/kernel` | 组合微内核：模块声明、依赖解析、拓扑装配与统一生命周期 | contracts、utils |
+| `src/runtime` | Bot 进程门面与装配工厂 | contracts、kernel、utils |
 | `ops` | 热路径外的只读观察资源树与本地 Panel HTTP 适配 | 标准库、aiosqlite、FastAPI、Uvicorn |
-| `aurora` | 项目配置、分阶段组合根、项目 runtime 与 CLI | 所有下层包 |
+| `aurora` | CLI 命令分发与项目配置解析 | 下层包 |
 
-依赖方向固定为 `utils/contracts ← agents/prompt/ai/world/memory/cadence/mcp`、`agents/contracts ← tools ← engine ← aurora`，`console ← aurora`，
-`ops ← aurora`。ops 作为持有 AuroraAssembly 的 backend，运行时只许依赖 `aurora.composer`/`aurora.config`/`aurora.configuration` 与
-`src.contracts`/`src.utils`；src 功能包与 `aurora.runtime`/`aurora.composition`/`aurora.views` 不进入 ops 的运行时导入
-（类型位置允许 TYPE_CHECKING）。除 `src.world` 外的认知核心不依赖配置加载器、数据库、Web 框架、MCP SDK 或具体
-Provider；`src/mcp` 作为协议适配叶子例外依赖 MCP SDK，但不依赖 tools、engine、aurora 或 ops。`src` 不导入 `aurora` 或 `ops`。
+依赖方向固定为 `utils/contracts ← agents/prompt/ai/world/memory/cadence/mcp/console`、`contracts ← kernel ← runtime`，
+`contracts/kernel ← ops`，`src ← aurora`。ops 作为持有 `Assembly` 的 backend，运行时只许依赖 `src.kernel`/`src.contracts`/`src.utils`
+与 `aurora.config`/`aurora.configuration`；src 功能包与 `src.runtime` 不进入 ops 的运行时导入（类型位置允许 TYPE_CHECKING）。
+除 `src.world` 外的认知核心不依赖配置加载器、数据库、Web 框架、MCP SDK 或具体 Provider；`src/mcp` 作为协议适配叶子例外依赖
+MCP SDK，但不依赖 tools、engine、aurora 或 ops。`src` 不导入 `aurora` 或 `ops`。
 
-`contracts` 与 `utils` 是唯一可被任何包运行时直接引用的基础设施叶子。功能 src 包之间不运行时相互引用：跨包能力只经组合层
-构造并注入的实例在运行期调用，类型位置只允许 `TYPE_CHECKING` 导入。上表“可依赖”列表示逻辑类型依赖，不代表运行时 import 边。
+`contracts` 与 `utils` 是唯一可被任何包运行时直接引用的基础设施叶子。功能 src 包之间不运行时相互引用：跨包能力只经组合内核
+装配并注入的契约实例在运行期调用，类型位置只允许 `TYPE_CHECKING` 导入。上表“可依赖”列表示逻辑类型依赖，不代表运行时 import 边。
 
 规划但尚未实现的包只保留 `src/sandbox`；它不持有 world。sandbox 进入实现前必须使用同一注册基线与 ops 入口模式，
 且不得反向侵入现有包。
@@ -399,51 +401,46 @@ ops 的 `OperationSpec`、`OperationRouter` 与操作处理器保持适配器中
 行为的计数、ID 和阶段。日志不得包含环境变量值、认证信息、消息正文、Prompt、Tool 参数或结果正文、模型原始请求/响应、世界提交
 summary/data；这些内容只能留在其已有领域边界。第三方库日志不计为项目诊断覆盖，也不得通过 root logger 重复传播。
 
-`aurora` 虽不属于认知核心，仍保留以下必要的增长边界：
+`aurora` 只保留 CLI 命令分发与项目配置解析，不再持有任何运行期组合：
 
-- `aurora.commands`：每个 CLI 命令一个模块，目录入口按文件名排序自动发现同时导出 `COMMAND + execute` 的模块；命令实现不进入 `main.py`；`config list` 与
-  `config show <name>` 只读取注册目录和源文件，不修改配置；
-- `aurora.configuration`：每个 TOML 文件对应一个同名 Python 模块；模块定义自己的纯配置值、解析器并导出唯一 `CONFIG_SPEC`，目录入口按文件名排序自动发现；
-- `aurora.composition`：每个需要项目实例的 `src` 子包对应一个同名代表模块；模块只导出自身键、`provides`、按键名声明的
-   `requires`、多值 `contributes/consumes` 与 `construct` 构造器，目录入口按文件名排序自动发现唯一 `PACKAGE_SPEC`。兄弟能力一律
-   到构造期经组合上下文按实例键名或稳定贡献键取得，代表模块之间不运行时相互 import（类型位置允许 TYPE_CHECKING），也不直接
-   调用兄弟包的构造函数。唯一实例键仍只有一个提供者；贡献键允许任意数量的模块追加同类型值，消费方自动依赖全部已发现贡献者，
-   零贡献是合法状态。通用组合器校验键名、贡献声明和依赖环并按拓扑顺序装配，不知道具体 `src` 子包。
-   Tool 是第一个多值贡献点：mcp、调用者注入和未来 TTS 等能力都向稳定 Tool 贡献键追加 `Tool`，agents 用完整贡献集合解析可见名称，
-    tools 用同一集合与框架内建工具冻结唯一 `ToolRegistry`；新增 Tool 提供者不得修改 agents、tools 或 runtime。
-    项目进程门面由同目录的 `runtime` 代表模块声明：它按实际依赖构造 `RuntimeFactory`，在最终 Assembly 完成后创建
-    `AuroraRuntime`，从而让 Bot 的世界与森林使用同一组已冻结实例。工厂只捕获 runner、agents、root 配置、console 与 world，
-    不捕获可继续写入的 CompositionContext；门面不为了转存实例而持有 Memory、MCP 或 Cadence。
-    `TREE_LAUNCHER_BINDINGS` 是接收 `TreeLauncher` 的同步绑定函数贡献点；cadence 在自身 construct 中贡献 `bind_launcher`，
-    runtime 模块消费完整绑定集合，工厂创建门面后逐一接线。绑定仅连接已构造实例，不执行外部效果；绑定完成后才允许生命周期
-    activate/run。该贡献点只服务 Bot 的统一认知唤起端口，不向贡献者暴露整个 Assembly 或进程控制。
-   `PackageSpec` 还可声明异步 `prepare/activate/run/close` hook。prepare 在本模块 construct 前执行并可返回失败清理函数；activate 在
-   Assembly 完成后按显式 activation-after 依赖执行；run 由统一生命周期以后台任务运行；close 与 prepare cleanup 逆序执行。
-   无 hook 的普通模块不承担运行期成本；新增需要连接、后台循环或关闭的能力只修改自己的代表模块。具体分工保持：agents 模块从纯配置
-   和完整 Tool 贡献目录构造 AgentDefinition 目录，mcp 模块在 prepare 中完成连接与工具发现并贡献冻结 Tool；world 模块在 prepare
-   中初始化唯一 WorldJournal；cadence 模块自行声明初始化和后台循环；console 模块向 TerminalConsole 注入同一 WorldWriter；engine
-   模块消费模型、提示词、工具与世界实例并完成跨目录引用校验；
-- `aurora.config`：按配置目录的显式注册顺序加载全部 TOML，并合并为一个只读 `AuroraConfig`；
-- `aurora.composer`：为组合提供类型化实例键、`PackageSpec`/`ModuleSpec`、按键名读取的构造上下文与只读 `AuroraAssembly`，
-    不知道具体 `src` 子包；`AuroraAssembly` 同时冻结组合期使用的 `AuroraConfig` 与全部已构造实例，包含 runtime 工厂；
-- `aurora.runtime`：在异步进程边界中应用日志配置后，把自动发现的 PackageSpec 交给统一生命周期；生命周期按依赖执行 prepare +
-    construct、冻结唯一 `AuroraAssembly`，入口仅取出 runtime 工厂创建门面并完成端口绑定，再执行 activate 并启动 run hook。
-    `runtime/assembly.py` 只适配调用者注入参数并调用工厂，不维护门面协作者清单或替具体模块绑定端口；`runtime/core.py`
-    只持有实际使用的注入协作者，不读取组合键或配置规格。启动准备不产生世界提交；由模块声明得到的顺序必须等价于
-   world 初始化 → MCP 连接/发现与 Tool 贡献冻结 → ToolRegistry 冻结 → AgentDefinition 跨目录校验 → Assembly 完成 → cadence
-   cursor 固定 → MCP 业务事件入口激活 → cadence 后台启动。Panel 后端默认不启动；Console 收到 `/serve` 后才从同一 Assembly
-   构造只读 OpsRuntime，并在同一事件循环启动 HTTP 服务。关闭时先停止已经显式启动的 HTTP 接入，再由生命周期取消 run task、
-   逆序执行模块 close 与 prepare cleanup；runtime 不按 world、MCP、cadence 或未来能力名称增加启动/关闭分支。
-- `aurora start`：首先读取项目根目录的 `.env`，且不覆盖进程已有环境变量；随后加载个人配置并应用进程日志，从已注册模型端点构造
-  Model，组合一个 AuroraRuntime，并统一管理 Panel、Console、停止事件和 SIGINT/SIGTERM；`--headless` 只禁用 Console。当前没有
-  Platform，因此不接受或伪装平台选择参数；
+- `aurora.commands`：每个 CLI 命令一个模块，目录入口按文件名排序自动发现同时导出 `COMMAND + execute` 的模块；命令实现不进入
+  `main.py`；`config list` 与 `config show <name>` 只读取注册目录和源文件，不修改配置；`aurora start` 读取 `.env`、加载个人配置、
+  应用进程日志，然后调用 `src.runtime` 的装配入口，并统一管理 Panel、Console、停止事件与 SIGINT/SIGTERM；`--headless` 只禁用
+  Console；
+- `aurora.configuration`：每个 TOML 文件对应一个同名 Python 模块；模块引用 `src/<pkg>` 的配置 DTO、声明解析器并导出唯一
+  `CONFIG_SPEC`，目录入口按文件名排序自动发现；配置 DTO 由能力包拥有，解析仍在 aurora；
+- `aurora.config`：按配置目录的显式注册顺序加载全部 TOML，并合并为一个只读 `AuroraConfig`；`AuroraConfig` 同时实现
+  `src.contracts.Settings`，向自描述模块提供 `project_root` 与按 DTO 类型读取的 `resolve`；
 - `aurora.utils`：只保存无项目语义的功能工具，例如子进程执行与 TOML 字段读取。
 
-命令、配置、组合和 ops 操作模块都按目录约定自动发现，文件名排序保证确定性；新增并列能力只增加该能力自己的配置模板、
-configuration/composition/src/ops 文件，不修改目录入口、Tool 聚合方或 runtime。自动发现范围只包括随 AuroraBot 安装的内部包，
-不读取 entry point、用户路径或第三方 manifest。重复配置键、重复实例键、未声明依赖、贡献类型冲突和依赖环都立即失败。
-配置值不直接使用 PromptCatalog、AgentTreeRunner 等实现期对象；从配置形状到运行对象的转换只发生在 composition。只提供契约或
-纯函数、无需项目实例的 `src` 子包不需要空的 composition 模块。
+组合机制与运行期门面属于 `src`：
+
+- `src.kernel`：以契约类型为能力身份，提供 `ModuleSpec` 与 `@module` 装饰器、`Capabilities`/`ModuleContext`、只读 `Assembly`、
+  依赖解析（冲突裁决、缺失依赖、可选跳过、环检测、拓扑排序）与 `ManagedAssembly` 生命周期。发现源包括随安装发布的 `src`
+  功能包（读取每个包的唯一 `MODULE`）、项目内被 Git 忽略的 `extensions/plugins/` 目录，以及 `aurorabot_plugin` entry point。
+  同优先级冲突、缺失依赖与依赖环都在启动前失败并给出诊断；第三方模块在进程内与宿主同权限运行，这是有意的信任边界。
+- 每个 `src/<pkg>` 在 `module.py` 中自描述唯一 `MODULE`：声明 `provides`、`requires`、`contributes/consumes` 与可选
+  `prepare/activate/run/close` hook。兄弟能力只经契约类型注入，模块之间不运行时相互 import（类型位置允许 TYPE_CHECKING）。
+  `prepare` 在本模块构造前执行并可返回失败清理函数；`activate` 在 Assembly 冻结后按 `activation_after` 执行；`run` 由统一
+  生命周期以后台任务运行；`close` 与 prepare cleanup 逆序执行。具体分工保持：agents 模块从纯配置和完整 Tool 贡献目录构造
+  AgentDefinition 目录；mcp 模块在 prepare 中完成连接与工具发现并贡献冻结 Tool；world 模块在 prepare 中初始化唯一
+  WorldJournal；cadence 模块自行声明初始化和后台循环并贡献 `TreeLauncher` 绑定；console 模块向 TerminalConsole 注入同一
+  WorldWriter；engine 模块消费模型、提示词、工具、世界与记忆实例并完成跨目录引用校验。
+- `src.runtime`：从冻结 `Assembly` 创建进程门面并完成端口接线。工厂只捕获 runner、agents、root 配置、console 与 world，
+  不为了转存实例而持有 Memory、MCP 或 Cadence；`TREE_LAUNCHER_BINDINGS` 是接收 `TreeLauncher` 的同步绑定函数贡献点，
+  工厂创建门面后逐一接线，绑定完成后才允许生命周期 activate/run。
+
+Tool 是第一个多值贡献点：mcp、调用者注入和未来 TTS 等能力都向稳定 Tool 贡献键追加 `Tool`，agents 用完整贡献集合解析可见名称，
+tools 用同一集合与框架内建工具冻结唯一 `ToolRegistry`；新增 Tool 提供者不得修改 agents、tools 或 runtime。启动准备不产生世界
+提交；由模块声明得到的顺序必须等价于 world 初始化 → MCP 连接/发现与 Tool 贡献冻结 → ToolRegistry 冻结 → AgentDefinition 跨
+目录校验 → Assembly 完成 → cadence cursor 固定 → MCP 业务事件入口激活 → cadence 后台启动。Panel 后端默认不启动；Console 收到
+`/serve` 后才从同一 Assembly 构造只读 OpsRuntime，并在同一事件循环启动 HTTP 服务。关闭时先停止已经显式启动的 HTTP 接入，再由
+生命周期取消 run task、逆序执行模块 close 与 prepare cleanup；runtime 不按 world、MCP、cadence 或未来能力名称增加启动/关闭分支。
+
+命令、配置与 ops 操作模块都按目录约定自动发现，文件名排序保证确定性；新增并列能力只增加该能力自己的配置模板、
+`configuration`/`src/<pkg>/module.py`/ops 文件，不修改目录入口、Tool 聚合方或 runtime。重复配置键、重复模块名、重复能力提供者、
+未声明依赖、贡献类型冲突和依赖环都立即失败。配置值不直接使用 PromptCatalog、AgentTreeRunner 等实现期对象；从配置形状到运行
+对象的转换只发生在 `src/<pkg>/module.py`。
 
 ## 11. 配置与存储
 
@@ -499,7 +496,7 @@ per-scope sequence 与全局 insertion cursor，只保存世界提交，不归�
 - 独立 Task、Agent mailbox、Activity、因果投影和 output publication 状态机；
 - continuation、Responses/Chat Completions 双通道重放和多 Provider 能力协商；
 - 自动长期记忆、embedding、mem0/Chroma 和终态投影；
-- 七类业务贡献端口、manifest、面向第三方的扩展注册表；内部 PackageSpec 的通用贡献槽与生命周期 hook 不构成第三方插件协议；
+- 七类业务贡献端口与 manifest；第三方插件协议见 0302，但仍不包含通用事件总线、非单例作用域与运行时热插拔；
 - Panel 附件、WebSocket、静态文件托管、远程账号与多用户权限；
 - MCP Resources、Prompts、MCP Apps UI、sampling、elicitation、roots、`io.modelcontextprotocol/tasks` 与非文本工具结果；
 - 运行期 ToolRegistry 热替换、MCP 自动重连和跨重连效果幂等；
