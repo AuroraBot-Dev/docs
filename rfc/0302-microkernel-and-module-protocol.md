@@ -16,7 +16,6 @@ order: 12
 - `aurora/composer.py` 是纯机制——类型化实例键、`PackageSpec`/`ModuleSpec`、按依赖拓扑装配、`ManagedAssembly`
   生命周期，本身不含任何具体 `src` 子包名，却放在项目层 `aurora`。
 - `aurora/composition/*` 才是项目策略——每个 `src` 包一个代表模块，读取 `aurora.configuration` 的 TOML 规格并构造实例。
-- `ops` 为了拿到 `AuroraAssembly` 与 `InstanceKey`，必须把 `aurora.composer` 列入运行时允许集；一个只读观察后端因此依赖了项目组合层。
 - 每个能力都要在 `aurora/composition` 里再写一个代表模块，能力实现与它的装配描述分离；第三方无法在不修改宿主的情况下接入。
 
 本 RFC 把**机制**下沉为 `src` 的无项目语义内核，让**能力在自身包里自描述**，把**装配策略彻底从 `aurora` 移除**：
@@ -26,7 +25,7 @@ order: 12
 
 目标：
 
-1. 组合机制下沉到 `src/kernel`，成为可被任何包（含 `ops` 与第三方）依赖的叶子。
+1. 组合机制下沉到 `src/kernel`，成为可被任何包（含第三方插件）依赖的叶子。
 2. 每个能力在 `src/<pkg>` 内自描述：用装饰器声明“提供什么契约、需要什么契约、贡献什么、如何构造与何时激活”。
 3. 启动前完成冲突裁决、缺失依赖检测、循环依赖检测与拓扑排序，失败即拒绝启动并给出诊断。
 4. 内置能力与第三方插件使用同一协议；插件从 `./extensions/plugins/` 或 `aurorabot_plugin` entry point 接入，无需修改宿主。
@@ -55,7 +54,7 @@ order: 12
 依赖约束：
 
 - `src/kernel` 只依赖标准库、`src.utils` 与 `src.contracts`（仅取通用值类型，如 `ContributionKey`、`Settings`）。
-- `src/kernel` 不 import 任何具体领域契约实现、`aurora`、`ops` 或某个 `src` 功能包。
+- `src/kernel` 不 import 任何具体领域契约实现、`aurora` 或某个 `src` 功能包。
 - 内核以 `type` 作为能力身份，不硬编码任何能力名称。
 
 ## 4. 能力身份与公共契约
@@ -144,9 +143,9 @@ class DiscoverySource(Protocol):
 ## 8. 配置边界
 
 - `aurora` 只负责配置解析：把 `config/` 下的 TOML 加载为只读配置对象，并暴露只读目录供 `aurora config`
-  与 `ops` 观察。`aurora` 不构造任何运行期实例，也不持有装配逻辑。
+  观察。`aurora` 不构造任何运行期实例，也不持有装配逻辑。
 - 配置 DTO 定义在 `src/<pkg>`（能力自己的配置形状），`aurora.configuration` 的解析模块引用这些 DTO 把
-  TOML 转成值；模块通过 `context.settings.get(DtoType)` 读取自己的配置。这样模块自描述配置形状，而解析
+  TOML 转成值；模块通过 `context.settings.resolve(DtoType)` 读取自己的配置。这样模块自描述配置形状，而解析
   机制仍在 `aurora`。
 - `Settings` 是 `src.contracts` 中的只读配置访问契约，由内核注入 `ModuleContext`；`src` 功能包与内核不
   import `aurora.configuration`，项目 TOML 字段名不进入 `src`。
@@ -171,13 +170,11 @@ src/kernel                         ← 组合机制叶子
 src/<pkg>                          ← 能力实现 + 自描述模块 + 配置 DTO
 src/runtime                        ← 进程门面（自描述模块）
 aurora/commands, aurora/config*, aurora/main, aurora/utils  ← 命令分发与配置解析
-ops                                ← 只读观察后端
+auth                               ← 独立 Token 认证
 ```
 
 - `aurora/composer.py`、`aurora/composition/`、`aurora/contributions.py`、`aurora/runtime/` 删除。
-- `ops` 改为依赖 `src.kernel`（`Assembly`、`Capabilities`）与 `aurora.config`/`aurora.configuration`、
-  `src.contracts`/`src.utils`；不再需要 `aurora.composer` 特例。
-- `src` 仍不 import `aurora` 或 `ops`；`ops` 仍不进入 `src` 功能包运行时导入。
+- `src` 不 import `aurora`。
 
 ## 11. 对 RFC 0300 的修订
 
@@ -197,17 +194,16 @@ ops                                ← 只读观察后端
 3. 把 `aurora/composition/*` 的构造逻辑搬回各自 `src/<pkg>/module.py`，实例键改为契约类型，绑定 `MODULE`。
 4. 把配置 DTO 下沉到 `src/<pkg>`，`aurora.configuration` 改为引用 DTO；`Settings` 由 `aurora.config` 适配注入。
 5. 把 `aurora/runtime/` 下沉为 `src/runtime`，并让 `aurora/commands/start.py` 只调用装配入口。
-6. `ops` 切换到 `src.kernel` 的 `Assembly`/`Capabilities`。
-7. 更新 `tests/test_dependency_boundaries.py`：允许集加入 `src.kernel`、`src.runtime`，移除 `aurora.composer`/
+6. 更新 `tests/test_dependency_boundaries.py`：允许集加入 `src.kernel`、`src.runtime`，移除 `aurora.composer`/
    `aurora.composition`/`aurora.runtime`。
-8. 增加本地插件目录与 `aurorabot_plugin` entry point 发现、冲突/缺失/环诊断的离线测试。
+7. 增加本地插件目录与 `aurorabot_plugin` entry point 发现、冲突/缺失/环诊断的离线测试。
 
 ## 13. 验收标准
 
 - [ ] `src/kernel` 运行时只依赖 `src.utils` 与 `src.contracts`，无领域实现 import。
 - [ ] `aurora` 不再包含任何运行期组合或协作者清单，只保留命令、配置与项目工具。
 - [ ] 每个 `src/<pkg>` 自描述唯一 `MODULE`；能力身份是契约类型，无字符串能力键。
-- [ ] `ops` 运行时不再 import `aurora.composer`，依赖边界测试通过。
+- [ ] 依赖边界测试确认 `src` 不导入 `aurora`。
 - [ ] 新增第三方插件无需修改宿主代码即可经 `./extensions/plugins/` 或 `aurorabot_plugin` 接入。
 - [ ] 冲突、缺失依赖、循环依赖在启动前失败并输出可定位诊断。
 - [ ] 不存在通用事件总线、非单例作用域、运行时热插拔或内核版本协商。
