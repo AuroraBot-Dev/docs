@@ -170,7 +170,6 @@ src/kernel                         ← 组合机制叶子
 src/<pkg>                          ← 能力实现 + 自描述模块 + 配置 DTO
 src/runtime                        ← 进程门面（自描述模块）
 aurora/commands, aurora/config*, aurora/main, aurora/utils  ← 命令分发与配置解析
-auth                               ← 独立 Token 认证
 ```
 
 - `aurora/composer.py`、`aurora/composition/`、`aurora/contributions.py`、`aurora/runtime/` 删除。

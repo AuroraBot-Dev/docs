@@ -509,4 +509,3 @@ MCP Tasks 只是一种协议扩展，也不得映射为 Aurora Task；如未来�
     Task 或七端口回流。
 20. `logging.toml` 在 World/MCP 启动效果前配置统一终端与轮转文件 logger；核心运行包的启动、结束、失败和效果未知路径有日志行为测试，
     且测试确认消息正文、Prompt、Tool 参数/结果、模型载荷、环境变量值与世界 data 不会进入项目日志。
-21. `auth` 提供独立 Token 生成、恒定时间校验与安全文件持久化，不依赖 aurora/src，并有离线测试。
