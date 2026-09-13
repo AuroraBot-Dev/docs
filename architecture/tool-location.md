@@ -25,7 +25,7 @@ order: 7
 
 ## 影响面
 
-- `aurora/configuration/runtime.py`：解析 `[runtime.tools]`。
+- `aurora/configs/runtime.py`：解析 `[runtime.tools]`。
 - `aurora/utils/process.py`：`resolve_tool` 与 `run_process` 改造。
 - `aurora/utils/pnpm.py`、`aurora/commands/setup.py`、`aurora/commands/check.py`、`aurora/commands/donk.py`：改用统一解析。
 - `scripts/{linux,macos,windows}/setup.*`：前置检查改用解析结果；接收可选工具路径参数或环境变量。

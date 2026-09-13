@@ -53,7 +53,7 @@ DEEPSEEK_API_KEY=
 # SILICONFLOW_API_KEY=
 ```
 
-更多配置说明见 [配置](./configuration)
+更多配置说明见 [配置](./configs)
 :::
 
 ## 启动Bot

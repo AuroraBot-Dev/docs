@@ -12,7 +12,7 @@ order: 3
 
 `.env` 是本地启动便利入口，只能向进程环境补充尚不存在的变量，不覆盖调用者显式设置的环境，也不定义或改写 TOML 结构。文件不存在时按空环境处理；`.env` 与 `config/` 一样属于个人文件，不进入源码发布或 Git 跟踪。
 
-模板与个人目录保持相同拓扑。每个 TOML 只由同相对路径的 configuration 模块解析；通用加载器不包含文件名、字段名或具体配置类型分支。新增结构配置时，只增加一个模板 TOML 与一个导出 `CONFIG_SPEC` 的同路径 configuration 模块。密钥只来自环境变量。
+模板与个人目录保持相同拓扑。每个 TOML 只由同相对路径的 configs 模块解析；通用加载器不包含文件名、字段名或具体配置类型分支。新增结构配置时，只增加一个模板 TOML 与一个导出 `CONFIG_SPEC` 的同路径 configs 模块。密钥只来自环境变量。
 
 ## 配置清单
 
@@ -30,7 +30,7 @@ order: 3
 
 ## MCP 与平台配置
 
-`apps.toml` 由同名 configuration 模块解析为类型化、不可变的 MCP App DTO，不再只保留原始 TOML。package 全局唯一。stdio App 必须声明 `working_dir + command`，不得声明 URL；Streamable HTTP App 必须声明 HTTPS URL，不得声明本地命令或工作目录。两者均支持 `enabled`、`timeout_seconds`、显式环境变量名白名单与事件模式；远程认证只使用 `auth_env`。协议首选版本与自动兼容策略是架构事实，不开放 TOML 选择另一 SDK 主版本。为兼容已有个人配置，省略 `event_mode` 等价于安全的 `disabled`；启用现代扩展或受限 legacy 转换仍必须显式填写对应模式。
+`apps.toml` 由同名 configs 模块解析为类型化、不可变的 MCP App DTO，不再只保留原始 TOML。package 全局唯一。stdio App 必须声明 `working_dir + command`，不得声明 URL；Streamable HTTP App 必须声明 HTTPS URL，不得声明本地命令或工作目录。两者均支持 `enabled`、`timeout_seconds`、显式环境变量名白名单与事件模式；远程认证只使用 `auth_env`。协议首选版本与自动兼容策略是架构事实，不开放 TOML 选择另一 SDK 主版本。为兼容已有个人配置，省略 `event_mode` 等价于安全的 `disabled`；启用现代扩展或受限 legacy 转换仍必须显式填写对应模式。
 
 `platforms.toml` 只保存 MCP 总开关与终端诊断偏好，不由此恢复通用 Platform、Manifest 或七端口体系。App enabled、目录或 schema 变化只在重启后生效。
 

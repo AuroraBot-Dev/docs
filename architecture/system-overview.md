@@ -50,15 +50,16 @@ order: 1
 
 Tool 是第一个多值贡献点：mcp、调用者注入和未来 TTS 等能力都向稳定 Tool 贡献键追加 `Tool`，agents 用完整贡献集合解析可见名称，tools 用同一集合与框架内建工具冻结唯一 `ToolRegistry`；新增 Tool 提供者不得修改 agents、tools 或 runtime。启动准备不产生世界提交；由模块声明得到的顺序必须等价于 world 初始化 → MCP 连接/发现与 Tool 贡献冻结 → ToolRegistry 冻结 → AgentDefinition 跨目录校验 → Assembly 完成 → cadence cursor 固定 → MCP 业务事件入口激活 → cadence 后台启动。关闭时由生命周期取消 run task、逆序执行模块 close 与 prepare cleanup；runtime 不按 world、MCP、cadence 或未来能力名称增加启动/关闭分支。
 
-命令与配置模块都按目录约定自动发现，文件名排序保证确定性；新增并列能力只增加该能力自己的配置模板、`configuration`/`src/<pkg>/module.py` 文件，不修改目录入口或 Tool 聚合方。重复配置键、重复模块名、重复能力提供者、未声明依赖、贡献类型冲突和依赖环都立即失败。配置值不直接使用 PromptCatalog、AgentTreeRunner 等实现期对象；从配置形状到运行对象的转换只发生在 `src/<pkg>/module.py`。
+命令与配置模块都按目录约定自动发现，文件名排序保证确定性；新增并列能力只增加该能力自己的配置模板、`configs`/`src/<pkg>/module.py` 文件，不修改目录入口或 Tool 聚合方。重复配置键、重复模块名、重复能力提供者、未声明依赖、贡献类型冲突和依赖环都立即失败。配置值不直接使用 PromptCatalog、AgentTreeRunner 等实现期对象；从配置形状到运行对象的转换只发生在 `src/<pkg>/module.py`。
 
 ## CLI 与配置层
 
 `aurora` 只保留 CLI 命令分发与项目配置解析，不再持有任何运行期组合：
 
 - `aurora.commands`：每个 CLI 命令一个模块（可为包），目录入口按文件名排序自动发现同时导出 `COMMAND + execute` 的模块；命令实现不进入 `main.py`；`aurora config` 默认只读：不带参数列出全部注册配置，带名称显示源文件路径与实例化后的类型化值，`--raw` 显示原始 TOML；仅在显式 `--edit`（调用 `$EDITOR`）或 `--set`（经 tomlkit 保留格式地改写个人 `config/`）时才写入，且只写个人配置、绝不回退模板或写回源码；`aurora start` 读取 `.env`、加载个人配置、应用进程日志、安装并恢复 SIGINT/SIGTERM 停止处理器，然后调用 `src.runtime` 的装配与运行入口；`--headless` 只禁用 Console；
-- `aurora.configuration`：每个 TOML 文件对应一个同名 Python 模块；模块引用 `src/<pkg>` 的配置 DTO、声明解析器并导出唯一 `CONFIG_SPEC`，目录入口按文件名排序自动发现；配置 DTO 由能力包拥有，解析仍在 aurora；
-- `aurora.config`：按配置目录的显式注册顺序加载全部 TOML，并合并为一个只读 `AuroraConfig`；`AuroraConfig` 同时实现 `src.contracts.Settings`，向自描述模块提供 `project_root` 与按 DTO 类型读取的 `resolve`；
+- `aurora.configs`：每个 TOML 文件对应一个同名 Python 模块；模块引用 `src/<pkg>` 的配置 DTO、声明解析器并导出唯一 `CONFIG_SPEC`，目录入口按文件名排序自动发现；配置 DTO 由能力包拥有，解析仍在 aurora；
+- `aurora.contracts`：配置与命令的公共值对象契约（`ConfigSpec`/`Field`/形状、`CommandSpec`/`CommandRegistry`）；`aurora.configs`/`aurora.commands` 只从这里导入声明类型，装配与解析逻辑仍在 `aurora.configurator`/`aurora.commander`；
+- `aurora.configurator`：按配置目录的显式注册顺序加载全部 TOML，并合并为一个只读 `AuroraConfig`；`AuroraConfig` 同时实现 `src.contracts.Settings`，向自描述模块提供 `project_root` 与按 DTO 类型读取的 `resolve`；
 - `aurora.utils`：只保存无项目语义的功能工具，例如子进程执行与 TOML 字段读取。
 
 ## 日志边界
