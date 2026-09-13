@@ -155,9 +155,11 @@ class DiscoverySource(Protocol):
 ## 9. 进程门面与启动
 
 - 进程门面（今天的 `aurora/runtime`）下沉为 `src/runtime`，自描述为一个消费 runner、agents、console、
-  world 与 `TreeLauncher` 绑定贡献、提供运行期门面工厂的模块。
-- `aurora/commands/start.py` 只做：读取 `.env`、加载配置、应用日志、调用 `src` 的装配入口、管理停止事件与
-  SIGINT/SIGTERM。命令层不持有协作者清单，也不写装配分支。
+  world 与 `TreeLauncher` 绑定贡献、提供运行期门面工厂 `RuntimeFactory` 的模块。装配入口也归 `src/runtime`：
+  它发现内建 `src`、`extensions/plugins/` 与 entry point 声明，执行统一生命周期，再从冻结 `Assembly` 创建门面、
+  驱动 Console 前台与逆序关闭。
+- `aurora/commands/start.py` 只做：读取 `.env`、加载配置、应用日志、安装并恢复 SIGINT/SIGTERM 停止处理器、
+  调用 `src.runtime` 的装配与运行入口。命令层不持有协作者清单，也不写装配分支。
 - 启动准备不产生世界提交；由模块声明得到的顺序必须等价于：world 初始化 → MCP 连接/发现与 Tool 贡献冻结 →
   ToolRegistry 冻结 → AgentDefinition 跨目录校验 → Assembly 完成 → cadence cursor 固定 → MCP 业务事件入口
   激活 → cadence 后台启动。

@@ -374,7 +374,7 @@ summary/data；这些内容只能留在其已有领域边界。第三方库日�
 
 - `aurora.commands`：每个 CLI 命令一个模块，目录入口按文件名排序自动发现同时导出 `COMMAND + execute` 的模块；命令实现不进入
   `main.py`；`config list` 与 `config show <name>` 只读取注册目录和源文件，不修改配置；`aurora start` 读取 `.env`、加载个人配置、
-  应用进程日志，然后调用 `src.runtime` 的装配入口，并统一管理 Console、停止事件与 SIGINT/SIGTERM；`--headless` 只禁用
+  应用进程日志、安装并恢复 SIGINT/SIGTERM 停止处理器，然后调用 `src.runtime` 的装配与运行入口；`--headless` 只禁用
   Console；
 - `aurora.configuration`：每个 TOML 文件对应一个同名 Python 模块；模块引用 `src/<pkg>` 的配置 DTO、声明解析器并导出唯一
   `CONFIG_SPEC`，目录入口按文件名排序自动发现；配置 DTO 由能力包拥有，解析仍在 aurora；
@@ -395,9 +395,11 @@ summary/data；这些内容只能留在其已有领域边界。第三方库日�
   AgentDefinition 目录；mcp 模块在 prepare 中完成连接与工具发现并贡献冻结 Tool；world 模块在 prepare 中初始化唯一
   WorldJournal；cadence 模块自行声明初始化和后台循环并贡献 `TreeLauncher` 绑定；console 模块向 TerminalConsole 注入同一
   WorldWriter；engine 模块消费模型、提示词、工具、世界与记忆实例并完成跨目录引用校验。
-- `src.runtime`：从冻结 `Assembly` 创建进程门面并完成端口接线。工厂只捕获 runner、agents、root 配置、console 与 world，
-  不为了转存实例而持有 Memory、MCP 或 Cadence；`TREE_LAUNCHER_BINDINGS` 是接收 `TreeLauncher` 的同步绑定函数贡献点，
-  工厂创建门面后逐一接线，绑定完成后才允许生命周期 activate/run。
+- `src.runtime`：自描述为 `runtime` 模块，提供从冻结 `Assembly` 创建进程门面的 `RuntimeFactory` 契约；装配入口发现内建 `src`
+  模块、本地插件目录与 entry point，执行统一生命周期，并从冻结 `Assembly` 创建门面、驱动 Console 前台与逆序关闭。工厂只捕获
+  runner、agents、root 配置、console 与 world，不为了转存实例而持有 Memory、MCP 或 Cadence；`TREE_LAUNCHER_BINDINGS` 是接收
+  `TreeLauncher` 的同步绑定函数贡献点，工厂创建门面后逐一接线，绑定完成后才允许生命周期 activate/run。进程日志与
+  SIGINT/SIGTERM 由 `aurora start` 拥有，不在门面内实现。
 
 Tool 是第一个多值贡献点：mcp、调用者注入和未来 TTS 等能力都向稳定 Tool 贡献键追加 `Tool`，agents 用完整贡献集合解析可见名称，
 tools 用同一集合与框架内建工具冻结唯一 `ToolRegistry`；新增 Tool 提供者不得修改 agents、tools 或 runtime。启动准备不产生世界
